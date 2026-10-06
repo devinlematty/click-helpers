@@ -41,6 +41,8 @@ class InventoryHoverHighlightOverlay extends Overlay
 	private static class Panel
 	{
 		final Rectangle area;
+		/** Whether the tick cue applies; only the prayer tab, where flicking happens. */
+		boolean tickCue;
 		/** Areas the hover highlight can fill. */
 		final List<Rectangle> targets = new ArrayList<>();
 		/** Every slot, including skipped ones, so the misclick guard ignores them. */
@@ -93,7 +95,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 		if (target != null)
 		{
-			drawHighlight(graphics, target, tickPhase(now));
+			drawHighlight(graphics, target, tickPhase(now), panel.tickCue);
 		}
 		else if (panel != null && config.misclickGuard() && smallestAt(panel.slots, mouse) == null)
 		{
@@ -180,6 +182,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 		collectClickable(root, found);
 
 		Panel panel = new Panel(root.getBounds());
+		panel.tickCue = rootId == InterfaceID.Prayerbook.CONTAINER;
 		// A clickable widget can contain a smaller clickable child; keep only the innermost
 		for (Rectangle r : found)
 		{
@@ -304,10 +307,12 @@ class InventoryHoverHighlightOverlay extends Overlay
 		return phase - Math.floor(phase);
 	}
 
-	private void drawHighlight(Graphics2D graphics, Rectangle bounds, double phase)
+	private void drawHighlight(Graphics2D graphics, Rectangle bounds, double phase, boolean useTickCue)
 	{
 		InventoryHoverHighlightConfig.HighlightStyle style = config.style();
-		InventoryHoverHighlightConfig.TickCue cue = config.tickCue();
+		InventoryHoverHighlightConfig.TickCue cue = useTickCue
+			? config.tickCue()
+			: InventoryHoverHighlightConfig.TickCue.OFF;
 
 		if (style != InventoryHoverHighlightConfig.HighlightStyle.OUTLINE)
 		{

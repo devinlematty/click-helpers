@@ -274,7 +274,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@ConfigItem(
 		keyName = "tickCue",
 		name = "Tick cue",
-		description = "Show progress through the current game tick on the hover highlight."
+		description = "Show progress through the click window on the hovered prayer."
 			+ "<br>Pulse: brightens at the pulse position in each click window"
 			+ "<br>Drain: outline shrinks as the click window runs out"
 			+ "<br>Color: outline goes green to red as the click window runs out",

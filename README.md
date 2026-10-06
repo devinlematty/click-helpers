@@ -29,7 +29,8 @@ straight from the game's widgets.
 - **Click flash**: the clicked slot flashes and fades out (color and duration configurable)
 - **Queued click marker**: a dot on the clicked slot until the next game tick;
   turns red if the same slot is clicked twice in one tick (useful for prayer flicking)
-- **Tick cue**: shows progress through the current click window on the hover highlight.
+- **Tick cue**: shows progress through the current click window on the hovered prayer
+  (prayer tab only, since that is where flicking happens).
   A click reaches the server about one round trip after the client sees a tick, so
   the window closes one round trip *before* each tick the client sees.
   - Pulse: brightens at the pulse position in each window
