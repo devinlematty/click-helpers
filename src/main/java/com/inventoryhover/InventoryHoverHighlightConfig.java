@@ -101,7 +101,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	default Color fillColor()
 	{
-		return new Color(150, 255, 150, 30);
+		return new Color(98, 189, 125, 60);
 	}
 
 	@Range(max = 10)
@@ -310,7 +310,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	default Color pulseColor()
 	{
-		return new Color(200, 160, 255, 160);
+		return new Color(135, 105, 178, 126);
 	}
 
 	@Units(Units.MILLISECONDS)
