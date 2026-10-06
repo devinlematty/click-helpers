@@ -38,9 +38,13 @@ straight from the game's widgets.
 
 ### Extras
 
-- **Crosshair**: lines through the row and column of the hovered slot
+- **Clickable grid**: outlines every area the hover highlight can fill, either in
+  the panel under the mouse or in every visible panel
 - **Autocast marker**: outlines the spell set to autocast; hovering it shows the
   hover highlight instead
+- **Active prayer highlight**: replaces the game's active prayer glow with a gold
+  highlight that follows the server-confirmed prayer state, so it does not
+  flicker when clicking fast
 
 ## Run locally
 

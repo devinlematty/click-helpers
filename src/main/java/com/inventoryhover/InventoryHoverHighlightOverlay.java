@@ -14,13 +14,15 @@ import java.awt.geom.PathIterator;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.Point;
+import net.runelite.api.Prayer;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetType;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -35,15 +37,17 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 	private static final int MARKER_SIZE = 6;
 
-	/** What is under the mouse: the clickable target (may be null) inside an area. */
-	private static class Hover
+	/** One panel (inventory, prayers, spells) and the clickable areas inside it. */
+	private static class Panel
 	{
-		final Rectangle target;
 		final Rectangle area;
+		/** Areas the hover highlight can fill. */
+		final List<Rectangle> targets = new ArrayList<>();
+		/** Every slot, including skipped ones, so the misclick guard ignores them. */
+		final List<Rectangle> slots = new ArrayList<>();
 
-		Hover(Rectangle target, Rectangle area)
+		Panel(Rectangle area)
 		{
-			this.target = target;
 			this.area = area;
 		}
 	}
@@ -68,169 +72,184 @@ class InventoryHoverHighlightOverlay extends Overlay
 		graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		long now = System.nanoTime();
 
-		Hover hover = findHover();
-		Rectangle target = hover == null ? null : hover.target;
+		List<Panel> panels = collectPanels();
 
+		Point mouse = client.getMouseCanvasPosition();
+		boolean hoverEnabled = mouse != null && mouse.getX() >= 0 && mouse.getY() >= 0
+			&& !(config.hideWhenMenuOpen() && client.isMenuOpen());
+
+		Panel panel = null;
+		Rectangle target = null;
+		if (hoverEnabled)
+		{
+			panel = panelAt(panels, mouse);
+			target = panel == null ? null : smallestAt(panel.targets, mouse);
+		}
+
+		drawGrid(graphics, panels, panel, target);
+		drawActivePrayers(graphics);
 		drawAutocast(graphics, target);
 		drawFlashes(graphics, now);
 
-		if (hover != null)
+		if (target != null)
 		{
-			if (target != null)
-			{
-				if (config.crosshair())
-				{
-					drawCrosshair(graphics, target, hover.area);
-				}
-				drawHighlight(graphics, target, tickPhase(now));
-			}
-			else if (config.misclickGuard())
-			{
-				drawMisclick(graphics);
-			}
+			drawHighlight(graphics, target, tickPhase(now));
+		}
+		else if (panel != null && config.misclickGuard() && smallestAt(panel.slots, mouse) == null)
+		{
+			drawMisclick(graphics, mouse);
 		}
 
 		drawQueuedClicks(graphics);
 		return null;
 	}
 
-	// Hover detection
+	// Clickable area detection
 
-	private Hover findHover()
+	private List<Panel> collectPanels()
 	{
-		if (config.hideWhenMenuOpen() && client.isMenuOpen())
+		List<Panel> panels = new ArrayList<>();
+		addSlotPanel(panels, InterfaceID.Inventory.ITEMS);
+		if (config.bankInventory())
 		{
-			return null;
+			addSlotPanel(panels, InterfaceID.Bankside.ITEMS);
 		}
-
-		Point mouse = client.getMouseCanvasPosition();
-		if (mouse == null || mouse.getX() < 0 || mouse.getY() < 0)
+		if (config.prayers())
 		{
-			return null;
+			addClickablePanel(panels, InterfaceID.Prayerbook.CONTAINER);
 		}
-
-		Hover hover = findHoveredSlot(InterfaceID.Inventory.ITEMS, mouse);
-		if (hover == null && config.bankInventory())
+		if (config.spells())
 		{
-			hover = findHoveredSlot(InterfaceID.Bankside.ITEMS, mouse);
+			addClickablePanel(panels, InterfaceID.MagicSpellbook.SPELLLAYER);
 		}
-		if (hover == null && config.prayers())
-		{
-			hover = findHoveredClickable(InterfaceID.Prayerbook.CONTAINER, mouse);
-		}
-		if (hover == null && config.spells())
-		{
-			hover = findHoveredClickable(InterfaceID.MagicSpellbook.SPELLLAYER, mouse);
-		}
-		return hover;
+		return panels;
 	}
 
 	/**
-	 * Finds the inventory slot under the mouse. Each dynamic child of the items
-	 * container is one slot, and its bounds are the exact area the client
-	 * accepts clicks in. Returns a Hover with a null target when the mouse is in
-	 * the container but on a skipped slot or in a gap, or null when outside it.
+	 * Adds an item container panel. Each dynamic child of the container is one
+	 * slot, and its bounds are the exact area the client accepts clicks in.
 	 */
-	private Hover findHoveredSlot(int containerId, Point mouse)
+	private void addSlotPanel(List<Panel> panels, int containerId)
 	{
 		Widget container = client.getWidget(containerId);
-		if (container == null || container.isHidden())
+		if (container == null || container.isHidden() || container.getBounds() == null)
 		{
-			return null;
-		}
-
-		Rectangle area = container.getBounds();
-		if (area == null || !area.contains(mouse.getX(), mouse.getY()))
-		{
-			return null;
+			return;
 		}
 
 		Widget[] slots = container.getDynamicChildren();
 		if (slots == null)
 		{
-			return null;
+			return;
 		}
 
+		Panel panel = new Panel(container.getBounds());
 		for (Widget slot : slots)
 		{
-			if (slot == null)
+			Rectangle bounds = slot == null ? null : slot.getBounds();
+			if (bounds == null)
 			{
 				continue;
 			}
 
-			Rectangle bounds = slot.getBounds();
-			if (bounds == null || !bounds.contains(mouse.getX(), mouse.getY()))
-			{
-				continue;
-			}
-
+			panel.slots.add(bounds);
 			// The game hides the widget of an empty slot, so the hidden flag
 			// only matters when empty slots are excluded
-			if (config.onlyItems() && (slot.isSelfHidden() || isEmpty(slot)))
+			if (!config.onlyItems() || (!slot.isSelfHidden() && !isEmpty(slot)))
 			{
-				// On a slot, just not a highlighted one: not a misclick gap
-				return null;
+				panel.targets.add(bounds);
 			}
-			return new Hover(bounds, area);
 		}
-		return new Hover(null, area);
+		panels.add(panel);
 	}
 
 	/**
-	 * Finds the smallest visible clickable widget under the mouse inside the
-	 * given root. Bounds are read live each frame, so this follows the
-	 * prayer/spellbook layout when it is filtered or resized.
+	 * Adds a panel of every visible clickable widget under the root. Bounds are
+	 * read live each frame, so this follows the prayer/spellbook layout when it
+	 * is filtered or resized.
 	 */
-	private Hover findHoveredClickable(int rootId, Point mouse)
+	private void addClickablePanel(List<Panel> panels, int rootId)
 	{
 		Widget root = client.getWidget(rootId);
-		if (root == null || root.isHidden())
+		if (root == null || root.isHidden() || root.getBounds() == null)
 		{
-			return null;
+			return;
 		}
 
-		Rectangle area = root.getBounds();
-		if (area == null || !area.contains(mouse.getX(), mouse.getY()))
+		Set<Rectangle> found = new LinkedHashSet<>();
+		collectClickable(root, found);
+
+		Panel panel = new Panel(root.getBounds());
+		// A clickable widget can contain a smaller clickable child; keep only the innermost
+		for (Rectangle r : found)
 		{
-			return null;
+			boolean containsOther = false;
+			for (Rectangle other : found)
+			{
+				if (other != r && r.contains(other))
+				{
+					containsOther = true;
+					break;
+				}
+			}
+			if (!containsOther)
+			{
+				panel.targets.add(r);
+			}
 		}
-		return new Hover(findHoveredClickable(root, mouse.getX(), mouse.getY(), null), area);
+		panel.slots.addAll(panel.targets);
+		panels.add(panel);
 	}
 
-	private static Rectangle findHoveredClickable(Widget widget, int x, int y, Rectangle best)
+	private static void collectClickable(Widget widget, Set<Rectangle> found)
 	{
 		if (widget == null || widget.isSelfHidden())
 		{
-			return best;
+			return;
 		}
 
 		Rectangle bounds = widget.getBounds();
-		if (bounds == null || !bounds.contains(x, y))
+		if (bounds != null && bounds.width > 0 && bounds.height > 0 && isClickable(widget))
 		{
-			// Children of layers can sit outside the parent bounds, so still descend
-			if (widget.getType() != WidgetType.LAYER)
-			{
-				return best;
-			}
-		}
-		else if (isClickable(widget) && (best == null || area(bounds) < area(best)))
-		{
-			best = bounds;
+			found.add(bounds);
 		}
 
-		best = findHoveredClickable(widget.getStaticChildren(), x, y, best);
-		best = findHoveredClickable(widget.getDynamicChildren(), x, y, best);
-		best = findHoveredClickable(widget.getNestedChildren(), x, y, best);
-		return best;
+		collectClickable(widget.getStaticChildren(), found);
+		collectClickable(widget.getDynamicChildren(), found);
+		collectClickable(widget.getNestedChildren(), found);
 	}
 
-	private static Rectangle findHoveredClickable(Widget[] widgets, int x, int y, Rectangle best)
+	private static void collectClickable(Widget[] widgets, Set<Rectangle> found)
 	{
 		if (widgets != null)
 		{
 			for (Widget child : widgets)
 			{
-				best = findHoveredClickable(child, x, y, best);
+				collectClickable(child, found);
+			}
+		}
+	}
+
+	private static Panel panelAt(List<Panel> panels, Point mouse)
+	{
+		for (Panel panel : panels)
+		{
+			if (panel.area.contains(mouse.getX(), mouse.getY()))
+			{
+				return panel;
+			}
+		}
+		return null;
+	}
+
+	private static Rectangle smallestAt(List<Rectangle> rects, Point mouse)
+	{
+		Rectangle best = null;
+		for (Rectangle r : rects)
+		{
+			if (r.contains(mouse.getX(), mouse.getY()) && (best == null || area(r) < area(best)))
+			{
+				best = r;
 			}
 		}
 		return best;
@@ -374,19 +393,74 @@ class InventoryHoverHighlightOverlay extends Overlay
 		}
 	}
 
-	private void drawCrosshair(Graphics2D graphics, Rectangle target, Rectangle area)
+	/** Outlines every area the hover highlight can fill. */
+	private void drawGrid(Graphics2D graphics, List<Panel> panels, Panel hovered, Rectangle target)
 	{
-		graphics.setColor(config.crosshairColor());
+		InventoryHoverHighlightConfig.GridMode mode = config.grid();
+		if (mode == InventoryHoverHighlightConfig.GridMode.OFF)
+		{
+			return;
+		}
+
+		graphics.setColor(config.gridColor());
 		graphics.setStroke(new BasicStroke(1));
-		int cx = (int) target.getCenterX();
-		int cy = (int) target.getCenterY();
-		graphics.drawLine(area.x, cy, area.x + area.width - 1, cy);
-		graphics.drawLine(cx, area.y, cx, area.y + area.height - 1);
+		for (Panel panel : panels)
+		{
+			if (mode == InventoryHoverHighlightConfig.GridMode.IN_PANEL && panel != hovered)
+			{
+				continue;
+			}
+			for (Rectangle r : panel.targets)
+			{
+				// The hover highlight draws over the hovered area
+				if (!r.equals(target))
+				{
+					graphics.draw(outlineShape(r, 1));
+				}
+			}
+		}
 	}
 
-	private void drawMisclick(Graphics2D graphics)
+	/** Highlights active prayers using the server-confirmed state. */
+	private void drawActivePrayers(Graphics2D graphics)
 	{
-		Point mouse = client.getMouseCanvasPosition();
+		if (!config.activePrayers())
+		{
+			return;
+		}
+
+		Widget container = client.getWidget(InterfaceID.Prayerbook.CONTAINER);
+		if (container == null || container.isHidden())
+		{
+			return;
+		}
+
+		int width = config.outlineWidth();
+		graphics.setStroke(new BasicStroke(width));
+		for (int i = 0; i < InventoryHoverHighlightPlugin.PRAYER_COUNT; i++)
+		{
+			Widget widget = client.getWidget(InterfaceID.Prayerbook.PRAYER1 + i);
+			if (widget == null || widget.isHidden() || widget.getBounds() == null)
+			{
+				continue;
+			}
+
+			Prayer prayer = plugin.prayerFor(widget);
+			if (prayer == null || !plugin.isPrayerActive(prayer))
+			{
+				continue;
+			}
+
+			Rectangle bounds = widget.getBounds();
+			graphics.setColor(config.activePrayerFill());
+			graphics.fill(fillShape(bounds));
+			graphics.setColor(config.activePrayerColor());
+			graphics.draw(outlineShape(bounds, width));
+		}
+	}
+
+	private void drawMisclick(Graphics2D graphics, Point mouse)
+	{
 		int r = 4;
 		graphics.setColor(config.misclickColor());
 		graphics.setStroke(new BasicStroke(2));

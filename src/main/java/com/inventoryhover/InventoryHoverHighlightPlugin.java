@@ -3,6 +3,7 @@ package com.inventoryhover;
 import com.google.inject.Provides;
 import java.awt.Rectangle;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,8 @@ import net.runelite.api.Client;
 import net.runelite.api.EnumComposition;
 import net.runelite.api.GameState;
 import net.runelite.api.ParamID;
+import net.runelite.api.Prayer;
+import net.runelite.api.events.BeforeRender;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuOptionClicked;
@@ -21,9 +24,11 @@ import net.runelite.api.widgets.Widget;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.Text;
 
 @PluginDescriptor(
 	name = "Inventory Hover Highlight",
@@ -36,6 +41,21 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	private static final int AUTOCAST_SPELLS_ENUM = 1986;
 
 	static final int TICK_NANOS = 600_000_000;
+
+	static final int PRAYER_COUNT = 30;
+
+	// Sprite the game draws behind an active prayer
+	private static final int ACTIVE_PRAYER_GLOW_SPRITE = 4892;
+
+	private static final Map<String, Prayer> PRAYERS_BY_NAME = new HashMap<>();
+
+	static
+	{
+		for (Prayer prayer : Prayer.values())
+		{
+			PRAYERS_BY_NAME.put(prayer.name(), prayer);
+		}
+	}
 
 	private static final int INVENTORY_GROUP = InterfaceID.Inventory.ITEMS >>> 16;
 	private static final int BANKSIDE_GROUP = InterfaceID.Bankside.ITEMS >>> 16;
@@ -99,10 +119,41 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	@Override
 	protected void shutDown()
 	{
+		clientThread.invoke(this::restorePrayerGlows);
 		overlayManager.remove(overlay);
 		flashes.clear();
 		queuedClicks.clear();
 		autocastComponent = -1;
+	}
+
+	@Subscribe
+	public void onBeforeRender(BeforeRender event)
+	{
+		if (!config.activePrayers())
+		{
+			return;
+		}
+
+		// The game re-shows the glow whenever its prayer script runs, so hide it every frame
+		for (int i = 0; i < PRAYER_COUNT; i++)
+		{
+			Widget glow = findPrayerGlow(client.getWidget(InterfaceID.Prayerbook.PRAYER1 + i));
+			if (glow != null && !glow.isSelfHidden())
+			{
+				glow.setHidden(true);
+			}
+		}
+	}
+
+	@Subscribe
+	public void onConfigChanged(ConfigChanged event)
+	{
+		if (event.getGroup().equals(InventoryHoverHighlightConfig.GROUP)
+			&& event.getKey().equals("activePrayers")
+			&& !config.activePrayers())
+		{
+			clientThread.invoke(this::restorePrayerGlows);
+		}
 	}
 
 	@Subscribe
@@ -167,6 +218,69 @@ public class InventoryHoverHighlightPlugin extends Plugin
 			|| (group == BANKSIDE_GROUP && config.bankInventory())
 			|| (group == PRAYER_GROUP && config.prayers())
 			|| (group == SPELLBOOK_GROUP && config.spells());
+	}
+
+	/** Shows the game's glow again on the prayers that are active. */
+	private void restorePrayerGlows()
+	{
+		for (int i = 0; i < PRAYER_COUNT; i++)
+		{
+			Widget widget = client.getWidget(InterfaceID.Prayerbook.PRAYER1 + i);
+			Widget glow = findPrayerGlow(widget);
+			if (glow != null)
+			{
+				Prayer prayer = prayerFor(widget);
+				glow.setHidden(prayer == null || !isPrayerActive(prayer));
+			}
+		}
+	}
+
+	/** The child of a prayer widget that draws the game's active glow, or null. */
+	private static Widget findPrayerGlow(Widget widget)
+	{
+		if (widget == null)
+		{
+			return null;
+		}
+		if (widget.getSpriteId() == ACTIVE_PRAYER_GLOW_SPRITE)
+		{
+			return widget;
+		}
+
+		for (Widget[] children : new Widget[][]{
+			widget.getStaticChildren(), widget.getDynamicChildren(), widget.getNestedChildren()})
+		{
+			if (children == null)
+			{
+				continue;
+			}
+			for (Widget child : children)
+			{
+				Widget glow = findPrayerGlow(child);
+				if (glow != null)
+				{
+					return glow;
+				}
+			}
+		}
+		return null;
+	}
+
+	/** The prayer a prayer tab widget belongs to, matched by its name, or null. */
+	Prayer prayerFor(Widget widget)
+	{
+		if (widget == null || widget.getName() == null)
+		{
+			return null;
+		}
+		String key = Text.removeTags(widget.getName()).toUpperCase().replaceAll("[^A-Z0-9]+", "_");
+		return PRAYERS_BY_NAME.get(key);
+	}
+
+	/** Server-confirmed prayer state, unaffected by the client's predicted toggle. */
+	boolean isPrayerActive(Prayer prayer)
+	{
+		return client.getServerVarbitValue(prayer.getVarbit()) == 1;
 	}
 
 	private void updateAutocast()

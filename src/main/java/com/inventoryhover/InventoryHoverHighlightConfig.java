@@ -21,6 +21,13 @@ public interface InventoryHoverHighlightConfig extends Config
 		BOTH
 	}
 
+	enum GridMode
+	{
+		OFF,
+		IN_PANEL,
+		ALWAYS
+	}
+
 	enum TickCue
 	{
 		OFF,
@@ -52,7 +59,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigSection(
 		name = "Extras",
-		description = "Crosshair and autocast marker",
+		description = "Clickable grid, autocast marker and active prayers",
 		position = 3
 	)
 	String extrasSection = "extras";
@@ -321,28 +328,69 @@ public interface InventoryHoverHighlightConfig extends Config
 	// Extras
 
 	@ConfigItem(
-		keyName = "crosshair",
-		name = "Crosshair",
-		description = "Draw lines through the row and column of the hovered slot",
+		keyName = "grid",
+		name = "Clickable grid",
+		description = "Outline every clickable area the hover highlight can fill."
+			+ "<br>In panel: only the panel under the mouse"
+			+ "<br>Always: every visible panel",
 		position = 0,
 		section = extrasSection
 	)
-	default boolean crosshair()
+	default GridMode grid()
+	{
+		return GridMode.IN_PANEL;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "gridColor",
+		name = "Grid color",
+		description = "Color of the clickable grid outlines",
+		position = 1,
+		section = extrasSection
+	)
+	default Color gridColor()
+	{
+		return new Color(255, 255, 255, 40);
+	}
+
+	@ConfigItem(
+		keyName = "activePrayers",
+		name = "Active prayer highlight",
+		description = "Replace the game's active prayer glow with a highlight that follows the"
+			+ " server-confirmed prayer state, so it does not flicker when clicking fast",
+		position = 4,
+		section = extrasSection
+	)
+	default boolean activePrayers()
 	{
 		return true;
 	}
 
 	@Alpha
 	@ConfigItem(
-		keyName = "crosshairColor",
-		name = "Crosshair color",
-		description = "Color of the crosshair lines",
-		position = 1,
+		keyName = "activePrayerColor",
+		name = "Active prayer outline",
+		description = "Outline color of an active prayer",
+		position = 5,
 		section = extrasSection
 	)
-	default Color crosshairColor()
+	default Color activePrayerColor()
 	{
-		return new Color(255, 255, 255, 50);
+		return new Color(255, 200, 0, 220);
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "activePrayerFill",
+		name = "Active prayer fill",
+		description = "Fill color of an active prayer",
+		position = 6,
+		section = extrasSection
+	)
+	default Color activePrayerFill()
+	{
+		return new Color(255, 200, 0, 50);
 	}
 
 	@ConfigItem(
