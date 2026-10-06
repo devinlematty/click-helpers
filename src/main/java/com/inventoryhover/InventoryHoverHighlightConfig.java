@@ -380,7 +380,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	default GridMode grid()
 	{
-		return GridMode.IN_PANEL;
+		return GridMode.ALWAYS;
 	}
 
 	@Alpha

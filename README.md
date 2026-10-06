@@ -1,4 +1,4 @@
-# Inventory Hover Highlight
+# Click Helpers
 
 RuneLite plugin that draws a rectangle over the exact clickable area of the
 inventory slot under your mouse, so you can see when an item is clickable.

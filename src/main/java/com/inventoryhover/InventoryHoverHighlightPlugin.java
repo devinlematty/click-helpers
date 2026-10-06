@@ -38,8 +38,8 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.Text;
 
 @PluginDescriptor(
-	name = "Inventory Hover Highlight",
-	description = "Highlights the clickable area of the hovered inventory slot",
+	name = "Click Helpers",
+	description = "Shows clickable areas, click feedback and tick timing for inventory, prayers and spells",
 	tags = {"inventory", "hover", "highlight", "click"}
 )
 public class InventoryHoverHighlightPlugin extends Plugin
