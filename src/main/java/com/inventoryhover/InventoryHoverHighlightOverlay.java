@@ -9,6 +9,7 @@ import net.runelite.api.Client;
 import net.runelite.api.Point;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetType;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -48,6 +49,14 @@ class InventoryHoverHighlightOverlay extends Overlay
 		if (slot == null && config.bankInventory())
 		{
 			slot = findHoveredSlot(InterfaceID.Bankside.ITEMS, mouse);
+		}
+		if (slot == null && config.prayers())
+		{
+			slot = findHoveredClickable(InterfaceID.Prayerbook.CONTAINER, mouse);
+		}
+		if (slot == null && config.spells())
+		{
+			slot = findHoveredClickable(InterfaceID.MagicSpellbook.SPELLLAYER, mouse);
 		}
 
 		if (slot != null)
@@ -94,6 +103,87 @@ class InventoryHoverHighlightOverlay extends Overlay
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Returns the bounds of the smallest visible clickable widget under the mouse
+	 * inside the given root, or null. Bounds are read live each frame, so this
+	 * follows the prayer/spellbook layout when it is filtered or resized.
+	 */
+	private Rectangle findHoveredClickable(int rootId, Point mouse)
+	{
+		Widget root = client.getWidget(rootId);
+		if (root == null || root.isHidden())
+		{
+			return null;
+		}
+		return findHoveredClickable(root, mouse.getX(), mouse.getY(), null);
+	}
+
+	private static Rectangle findHoveredClickable(Widget widget, int x, int y, Rectangle best)
+	{
+		if (widget == null || widget.isSelfHidden())
+		{
+			return best;
+		}
+
+		Rectangle bounds = widget.getBounds();
+		if (bounds == null || !bounds.contains(x, y))
+		{
+			// Children of layers can sit outside the parent bounds, so still descend
+			if (widget.getType() != WidgetType.LAYER)
+			{
+				return best;
+			}
+		}
+		else if (isClickable(widget) && (best == null || area(bounds) < area(best)))
+		{
+			best = bounds;
+		}
+
+		best = findHoveredClickable(widget.getStaticChildren(), x, y, best);
+		best = findHoveredClickable(widget.getDynamicChildren(), x, y, best);
+		best = findHoveredClickable(widget.getNestedChildren(), x, y, best);
+		return best;
+	}
+
+	private static Rectangle findHoveredClickable(Widget[] widgets, int x, int y, Rectangle best)
+	{
+		if (widgets != null)
+		{
+			for (Widget child : widgets)
+			{
+				best = findHoveredClickable(child, x, y, best);
+			}
+		}
+		return best;
+	}
+
+	private static boolean isClickable(Widget widget)
+	{
+		String verb = widget.getTargetVerb();
+		if (verb != null && !verb.isEmpty())
+		{
+			return true;
+		}
+
+		String[] actions = widget.getActions();
+		if (actions != null)
+		{
+			for (String action : actions)
+			{
+				if (action != null && !action.isEmpty())
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private static long area(Rectangle r)
+	{
+		return (long) r.width * r.height;
 	}
 
 	private static boolean isEmpty(Widget slot)

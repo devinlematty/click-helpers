@@ -89,10 +89,32 @@ public interface InventoryHoverHighlightConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "prayers",
+		name = "Prayers",
+		description = "Also highlight the hovered prayer in the prayer tab",
+		position = 6
+	)
+	default boolean prayers()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "spells",
+		name = "Spells",
+		description = "Also highlight the hovered spell in the spellbook",
+		position = 7
+	)
+	default boolean spells()
+	{
+		return false;
+	}
+
+	@ConfigItem(
 		keyName = "hideWhenMenuOpen",
 		name = "Hide when menu open",
 		description = "Do not highlight while a right-click menu is open",
-		position = 6
+		position = 8
 	)
 	default boolean hideWhenMenuOpen()
 	{
