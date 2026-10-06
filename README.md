@@ -14,8 +14,8 @@ modes are both supported because bounds come straight from the slot widgets.
 - **Outline width**: 1-4 px
 - **Only slots with items**: skip empty slots
 - **Bank inventory**: also highlight the inventory next to the bank
-- **Prayers**: also highlight the hovered prayer (off by default)
-- **Spells**: also highlight the hovered spell (off by default)
+- **Prayers**: also highlight the hovered prayer (on by default)
+- **Spells**: also highlight the hovered spell (on by default)
 - **Hide when menu open**: no highlight while a right-click menu is open
 
 ## Run locally

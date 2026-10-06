@@ -108,7 +108,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	default boolean prayers()
 	{
-		return false;
+		return true;
 	}
 
 	@ConfigItem(
@@ -119,7 +119,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	default boolean spells()
 	{
-		return false;
+		return true;
 	}
 
 	@ConfigItem(

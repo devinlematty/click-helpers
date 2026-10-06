@@ -89,11 +89,13 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 		for (Widget slot : slots)
 		{
-			if (slot == null || slot.isHidden())
+			if (slot == null)
 			{
 				continue;
 			}
-			if (config.onlyItems() && isEmpty(slot))
+			// The game hides the widget of an empty slot, so the hidden flag
+			// only matters when empty slots are excluded
+			if (config.onlyItems() && (slot.isSelfHidden() || isEmpty(slot)))
 			{
 				continue;
 			}
