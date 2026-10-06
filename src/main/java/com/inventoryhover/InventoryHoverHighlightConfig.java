@@ -5,7 +5,9 @@ import net.runelite.client.config.Alpha;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Range;
+import net.runelite.client.config.Units;
 
 @ConfigGroup(InventoryHoverHighlightConfig.GROUP)
 public interface InventoryHoverHighlightConfig extends Config
@@ -19,11 +21,50 @@ public interface InventoryHoverHighlightConfig extends Config
 		BOTH
 	}
 
+	enum TickCue
+	{
+		OFF,
+		PULSE,
+		DRAIN,
+		COLOR
+	}
+
+	@ConfigSection(
+		name = "Appearance",
+		description = "How the hover highlight looks",
+		position = 0
+	)
+	String appearanceSection = "appearance";
+
+	@ConfigSection(
+		name = "Areas",
+		description = "Where the hover highlight is shown",
+		position = 1
+	)
+	String areasSection = "areas";
+
+	@ConfigSection(
+		name = "Click feedback",
+		description = "Feedback for clicks and game ticks",
+		position = 2
+	)
+	String clickSection = "click";
+
+	@ConfigSection(
+		name = "Extras",
+		description = "Crosshair and autocast marker",
+		position = 3
+	)
+	String extrasSection = "extras";
+
+	// Appearance
+
 	@ConfigItem(
 		keyName = "style",
 		name = "Style",
 		description = "How the hovered slot is drawn",
-		position = 0
+		position = 0,
+		section = appearanceSection
 	)
 	default HighlightStyle style()
 	{
@@ -35,7 +76,8 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "outlineColor",
 		name = "Outline color",
 		description = "Color of the slot outline",
-		position = 1
+		position = 1,
+		section = appearanceSection
 	)
 	default Color outlineColor()
 	{
@@ -47,7 +89,8 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "fillColor",
 		name = "Fill color",
 		description = "Color of the slot fill",
-		position = 2
+		position = 2,
+		section = appearanceSection
 	)
 	default Color fillColor()
 	{
@@ -59,7 +102,8 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "cornerRadius",
 		name = "Corner radius",
 		description = "Rounds the corners of the highlight; 0 for square",
-		position = 3
+		position = 3,
+		section = appearanceSection
 	)
 	default int cornerRadius()
 	{
@@ -71,7 +115,8 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "outlineWidth",
 		name = "Outline width",
 		description = "Thickness of the outline in pixels",
-		position = 3
+		position = 4,
+		section = appearanceSection
 	)
 	default int outlineWidth()
 	{
@@ -79,10 +124,25 @@ public interface InventoryHoverHighlightConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "hideWhenMenuOpen",
+		name = "Hide when right-click menu open",
+		description = "Do not highlight while a right-click menu is open",
+		position = 5,
+		section = appearanceSection
+	)
+	default boolean hideWhenMenuOpen()
+	{
+		return false;
+	}
+
+	// Areas
+
+	@ConfigItem(
 		keyName = "onlyItems",
 		name = "Only slots with items",
-		description = "Skip empty slots",
-		position = 4
+		description = "Skip empty inventory slots",
+		position = 0,
+		section = areasSection
 	)
 	default boolean onlyItems()
 	{
@@ -93,7 +153,8 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "bankInventory",
 		name = "Bank inventory",
 		description = "Also highlight the inventory shown next to the bank",
-		position = 5
+		position = 1,
+		section = areasSection
 	)
 	default boolean bankInventory()
 	{
@@ -104,7 +165,8 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "prayers",
 		name = "Prayers",
 		description = "Also highlight the hovered prayer in the prayer tab",
-		position = 6
+		position = 2,
+		section = areasSection
 	)
 	default boolean prayers()
 	{
@@ -115,21 +177,196 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "spells",
 		name = "Spells",
 		description = "Also highlight the hovered spell in the spellbook",
-		position = 7
+		position = 3,
+		section = areasSection
 	)
 	default boolean spells()
 	{
 		return true;
 	}
 
+	// Click feedback
+
 	@ConfigItem(
-		keyName = "hideWhenMenuOpen",
-		name = "Hide when right-click menu open",
-		description = "Do not highlight while a right-click menu is open",
-		position = 8
+		keyName = "clickFlash",
+		name = "Click flash",
+		description = "Briefly flash the slot you clicked",
+		position = 0,
+		section = clickSection
 	)
-	default boolean hideWhenMenuOpen()
+	default boolean clickFlash()
 	{
 		return true;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "clickFlashColor",
+		name = "Flash color",
+		description = "Color of the click flash",
+		position = 1,
+		section = clickSection
+	)
+	default Color clickFlashColor()
+	{
+		return new Color(255, 255, 255, 140);
+	}
+
+	@Units(Units.MILLISECONDS)
+	@Range(min = 50, max = 1000)
+	@ConfigItem(
+		keyName = "clickFlashDuration",
+		name = "Flash duration",
+		description = "How long the click flash takes to fade",
+		position = 2,
+		section = clickSection
+	)
+	default int clickFlashDuration()
+	{
+		return 200;
+	}
+
+	@ConfigItem(
+		keyName = "clickMarker",
+		name = "Queued click marker",
+		description = "Mark a clicked slot with a dot until the next game tick",
+		position = 3,
+		section = clickSection
+	)
+	default boolean clickMarker()
+	{
+		return true;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "clickMarkerColor",
+		name = "Marker color",
+		description = "Color of the queued click marker",
+		position = 4,
+		section = clickSection
+	)
+	default Color clickMarkerColor()
+	{
+		return new Color(0, 255, 0, 220);
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "doubleClickColor",
+		name = "Double click color",
+		description = "Marker color when the same slot is clicked twice in one tick",
+		position = 5,
+		section = clickSection
+	)
+	default Color doubleClickColor()
+	{
+		return new Color(255, 60, 60, 220);
+	}
+
+	@ConfigItem(
+		keyName = "tickCue",
+		name = "Tick cue",
+		description = "Show progress through the current game tick on the hover highlight."
+			+ "<br>Pulse: brightens at the start of each tick"
+			+ "<br>Drain: outline shrinks as the tick runs out"
+			+ "<br>Color: outline goes green to red as the tick runs out",
+		position = 6,
+		section = clickSection
+	)
+	default TickCue tickCue()
+	{
+		return TickCue.DRAIN;
+	}
+
+	@Units(Units.MILLISECONDS)
+	@Range(max = 300)
+	@ConfigItem(
+		keyName = "tickLatency",
+		name = "Tick cue latency",
+		description = "Shifts the tick cue earlier to account for your ping",
+		position = 7,
+		section = clickSection
+	)
+	default int tickLatency()
+	{
+		return 0;
+	}
+
+	@ConfigItem(
+		keyName = "misclickGuard",
+		name = "Misclick guard",
+		description = "Show a red marker when the mouse is in a gap where a click does nothing",
+		position = 8,
+		section = clickSection
+	)
+	default boolean misclickGuard()
+	{
+		return true;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "misclickColor",
+		name = "Misclick color",
+		description = "Color of the misclick guard marker",
+		position = 9,
+		section = clickSection
+	)
+	default Color misclickColor()
+	{
+		return new Color(255, 60, 60, 180);
+	}
+
+	// Extras
+
+	@ConfigItem(
+		keyName = "crosshair",
+		name = "Crosshair",
+		description = "Draw lines through the row and column of the hovered slot",
+		position = 0,
+		section = extrasSection
+	)
+	default boolean crosshair()
+	{
+		return true;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "crosshairColor",
+		name = "Crosshair color",
+		description = "Color of the crosshair lines",
+		position = 1,
+		section = extrasSection
+	)
+	default Color crosshairColor()
+	{
+		return new Color(255, 255, 255, 50);
+	}
+
+	@ConfigItem(
+		keyName = "autocastMarker",
+		name = "Autocast marker",
+		description = "Outline the spell set to autocast; hovering it shows the hover highlight instead",
+		position = 2,
+		section = extrasSection
+	)
+	default boolean autocastMarker()
+	{
+		return true;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "autocastColor",
+		name = "Autocast color",
+		description = "Color of the autocast marker",
+		position = 3,
+		section = extrasSection
+	)
+	default Color autocastColor()
+	{
+		return new Color(0, 200, 255, 180);
 	}
 }
