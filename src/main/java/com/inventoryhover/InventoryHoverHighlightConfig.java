@@ -27,7 +27,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	default HighlightStyle style()
 	{
-		return HighlightStyle.OUTLINE;
+		return HighlightStyle.BOTH;
 	}
 
 	@Alpha
