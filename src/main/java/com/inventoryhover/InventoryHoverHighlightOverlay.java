@@ -7,6 +7,7 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Shape;
+import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
@@ -88,6 +89,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 			target = panel == null ? null : smallestAt(panel.targets, mouse);
 		}
 
+		drawDeadAreas(graphics, panels, panel);
 		drawGrid(graphics, panels, panel, target);
 		drawActivePrayers(graphics);
 		drawAutocast(graphics, target);
@@ -426,6 +428,32 @@ class InventoryHoverHighlightOverlay extends Overlay
 				b.y + 2,
 				MARKER_SIZE,
 				MARKER_SIZE));
+		}
+	}
+
+	/** Shades the parts of a panel where a click does nothing. */
+	private void drawDeadAreas(Graphics2D graphics, List<Panel> panels, Panel hovered)
+	{
+		InventoryHoverHighlightConfig.GridMode mode = config.deadAreas();
+		if (mode == InventoryHoverHighlightConfig.GridMode.OFF)
+		{
+			return;
+		}
+
+		graphics.setColor(config.deadAreaColor());
+		for (Panel panel : panels)
+		{
+			if (mode == InventoryHoverHighlightConfig.GridMode.IN_PANEL && panel != hovered)
+			{
+				continue;
+			}
+
+			Area dead = new Area(panel.area);
+			for (Rectangle slot : panel.slots)
+			{
+				dead.subtract(new Area(slot));
+			}
+			graphics.fill(dead);
 		}
 	}
 

@@ -46,6 +46,8 @@ straight from the game's widgets.
 
 - **Clickable grid**: outlines every area the hover highlight can fill, either in
   the panel under the mouse or in every visible panel
+- **Dead areas**: faint red shading over the gaps where a click does nothing,
+  in the panel under the mouse or in every visible panel
 - **Autocast marker**: outlines the spell set to autocast; hovering it shows the
   hover highlight instead
 - **Active prayer highlight**: replaces the game's active prayer glow with a gold

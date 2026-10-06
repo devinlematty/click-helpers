@@ -371,6 +371,33 @@ public interface InventoryHoverHighlightConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "deadAreas",
+		name = "Dead areas",
+		description = "Shade the gaps where a click does nothing."
+			+ "<br>In panel: only the panel under the mouse"
+			+ "<br>Always: every visible panel",
+		position = 2,
+		section = extrasSection
+	)
+	default GridMode deadAreas()
+	{
+		return GridMode.IN_PANEL;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "deadAreaColor",
+		name = "Dead area color",
+		description = "Color of the dead area shading",
+		position = 3,
+		section = extrasSection
+	)
+	default Color deadAreaColor()
+	{
+		return new Color(255, 60, 60, 25);
+	}
+
+	@ConfigItem(
 		keyName = "activePrayers",
 		name = "Active prayer highlight",
 		description = "Replace the game's active prayer glow with a highlight that follows the"
@@ -413,7 +440,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "autocastMarker",
 		name = "Autocast marker",
 		description = "Outline the spell set to autocast; hovering it shows the hover highlight instead",
-		position = 2,
+		position = 7,
 		section = extrasSection
 	)
 	default boolean autocastMarker()
@@ -426,7 +453,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "autocastColor",
 		name = "Autocast color",
 		description = "Color of the autocast marker",
-		position = 3,
+		position = 8,
 		section = extrasSection
 	)
 	default Color autocastColor()
