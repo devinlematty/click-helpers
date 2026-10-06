@@ -283,7 +283,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	default TickCue tickCue()
 	{
-		return TickCue.DRAIN;
+		return TickCue.PULSE;
 	}
 
 	@Units(Units.MILLISECONDS)
