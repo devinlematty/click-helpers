@@ -1,11 +1,19 @@
 # Click Helpers
 
-RuneLite plugin that draws a rectangle over the exact clickable area of the
-inventory slot under your mouse, so you can see when an item is clickable.
+RuneLite plugin that shows exactly where you can click in the inventory, the
+bank-side inventory, the prayer tab and the spellbook, and gives feedback when
+you click.
 
-Works in the inventory, the bank-side inventory, the prayer tab and the
-spellbook. Fixed and resizable modes are both supported because bounds come
-straight from the game's widgets.
+- Highlights the exact clickable area under the mouse, with an optional grid of
+  every clickable area and faint shading over dead gaps
+- Click flash, a queued click marker until the next game tick, and a red ring
+  when a click lands on an empty slot or a dead gap
+- Gold highlights for active prayers (from the server-confirmed state, so they do
+  not flicker) and for a spell selected for manual casting
+- Optional mid-tick cue on hovered prayers to help with prayer flicking
+
+Fixed and resizable modes are both supported because bounds come straight from
+the game's widgets. The plugin only draws overlays; it never sends input.
 
 ## Config
 
@@ -38,6 +46,7 @@ straight from the game's widgets.
   - Pulse: brightens at the cue position
   - Drain: the outline refills at the cue position, then shrinks
   - Color: the outline turns green at the cue position, then goes to red
+- **Pulse color**: color of the pulse cue (light purple by default)
 - **Mid-tick cue latency**: your round-trip ping to the world (shown in the World Hopper)
 - **Cue position**: where in the window every cue mode kicks off, 40% by default. Slightly
   before the middle leaves room for reaction time, while clicks that anticipate the
