@@ -56,6 +56,8 @@ straight from the game's widgets.
 - **Active prayer highlight**: replaces the game's active prayer glow with a gold
   highlight that follows the server-confirmed prayer state, so it does not
   flicker when clicking fast
+- **Selected spell highlight**: a spell selected for manual casting gets the same gold
+  highlight as an active prayer
 - **Pending prayer state**: a dashed gold outline from your click until the server
   confirms the change (dashed only when turning on, half fill when turning off)
 

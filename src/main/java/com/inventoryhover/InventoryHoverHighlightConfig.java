@@ -439,8 +439,8 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "activePrayerColor",
-		name = "Active prayer outline",
-		description = "Outline color of an active prayer",
+		name = "Active outline",
+		description = "Outline color of an active prayer or selected spell",
 		position = 5,
 		section = extrasSection
 	)
@@ -452,8 +452,8 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "activePrayerFill",
-		name = "Active prayer fill",
-		description = "Fill color of an active prayer",
+		name = "Active fill",
+		description = "Fill color of an active prayer or selected spell",
 		position = 6,
 		section = extrasSection
 	)
@@ -463,10 +463,22 @@ public interface InventoryHoverHighlightConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "selectedSpell",
+		name = "Selected spell highlight",
+		description = "Give a spell selected for manual casting the same gold highlight as an active prayer",
+		position = 7,
+		section = extrasSection
+	)
+	default boolean selectedSpell()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 		keyName = "pendingPrayers",
 		name = "Pending prayer state",
 		description = "Show a dashed outline from your click until the server confirms the prayer change",
-		position = 7,
+		position = 8,
 		section = extrasSection
 	)
 	default boolean pendingPrayers()
@@ -478,7 +490,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "autocastMarker",
 		name = "Autocast marker",
 		description = "Outline the spell set to autocast; hovering it shows the hover highlight instead",
-		position = 8,
+		position = 9,
 		section = extrasSection
 	)
 	default boolean autocastMarker()
@@ -491,7 +503,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "autocastColor",
 		name = "Autocast color",
 		description = "Color of the autocast marker",
-		position = 9,
+		position = 10,
 		section = extrasSection
 	)
 	default Color autocastColor()

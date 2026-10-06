@@ -120,6 +120,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 		drawDeadAreas(graphics, panels, panel);
 		drawGrid(graphics, panels, panel, target);
 		drawActivePrayers(graphics);
+		drawSelectedSpell(graphics);
 		drawAutocast(graphics, target);
 		drawFlashes(graphics, now);
 
@@ -664,6 +665,30 @@ class InventoryHoverHighlightOverlay extends Overlay
 			graphics.setColor(config.activePrayerColor());
 			graphics.draw(outline);
 		}
+	}
+
+	/** Gold highlight on a spell selected for manual casting, like an active prayer. */
+	private void drawSelectedSpell(Graphics2D graphics)
+	{
+		if (!config.selectedSpell() || !client.isWidgetSelected())
+		{
+			return;
+		}
+
+		Widget spell = client.getSelectedWidget();
+		if (spell == null || spell.isHidden() || spell.getBounds() == null
+			|| spell.getId() >>> 16 != InterfaceID.MagicSpellbook.SPELLLAYER >>> 16)
+		{
+			return;
+		}
+
+		Rectangle bounds = spell.getBounds();
+		int width = config.outlineWidth();
+		graphics.setColor(config.activePrayerFill());
+		graphics.fill(fillShape(bounds));
+		graphics.setStroke(new BasicStroke(width));
+		graphics.setColor(config.activePrayerColor());
+		graphics.draw(outlineShape(bounds, width));
 	}
 
 	private void drawMisclick(Graphics2D graphics, Point mouse)
