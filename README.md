@@ -29,15 +29,15 @@ straight from the game's widgets.
 - **Click flash**: the clicked slot flashes and fades out (color and duration configurable)
 - **Queued click marker**: a dot on the clicked slot until the next game tick;
   turns red if the same slot is clicked twice in one tick (useful for prayer flicking)
-- **Tick cue**: shows progress through the current click window on the hovered prayer
+- **Mid-tick cue**: shows progress through the current click window on the hovered prayer
   (prayer tab only, since that is where flicking happens).
   A click reaches the server about one round trip after the client sees a tick, so
   the window closes one round trip *before* each tick the client sees.
-  - Pulse: brightens at the pulse position in each window
-  - Drain: the outline shrinks as the window runs out
-  - Color: the outline goes from green to red as the window runs out
-- **Tick cue latency**: your round-trip ping to the world (shown in the World Hopper)
-- **Pulse position**: where in the window the pulse fires, 40% by default. Slightly
+  - Pulse: brightens at the cue position
+  - Drain: the outline refills at the cue position, then shrinks
+  - Color: the outline turns green at the cue position, then goes to red
+- **Mid-tick cue latency**: your round-trip ping to the world (shown in the World Hopper)
+- **Cue position**: where in the window every cue mode kicks off, 40% by default. Slightly
   before the middle leaves room for reaction time, while clicks that anticipate the
   beat a little early still land in the same tick
 - **Misclick guard**: a red X at the cursor when it is in a gap where a click does nothing

@@ -323,6 +323,10 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 	private void drawHighlight(Graphics2D graphics, Rectangle bounds, double phase, boolean useTickCue)
 	{
+		// Every cue mode restarts at the cue position: 0 at the cue point, 1 just before the next
+		double cycle = phase - config.pulsePosition() / 100.0;
+		cycle -= Math.floor(cycle);
+
 		InventoryHoverHighlightConfig.HighlightStyle style = config.style();
 		InventoryHoverHighlightConfig.TickCue cue = useTickCue
 			? config.tickCue()
@@ -336,13 +340,10 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 		if (cue == InventoryHoverHighlightConfig.TickCue.PULSE)
 		{
-			// Time since the pulse point, as a fraction of the window
-			double sincePulse = phase - config.pulsePosition() / 100.0;
-			sincePulse -= Math.floor(sincePulse);
-			if (sincePulse < PULSE_LENGTH)
+			if (cycle < PULSE_LENGTH)
 			{
 				Color outline = config.outlineColor();
-				double strength = 1 - sincePulse / PULSE_LENGTH;
+				double strength = 1 - cycle / PULSE_LENGTH;
 				graphics.setColor(withAlpha(outline, (int) (outline.getAlpha() * 0.6 * strength)));
 				graphics.fill(fillShape(bounds));
 			}
@@ -357,7 +358,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 		if (cue == InventoryHoverHighlightConfig.TickCue.COLOR)
 		{
 			// Hue from green (1/3) at the start of the tick to red (0) at the end
-			Color hue = Color.getHSBColor((float) ((1 - phase) / 3), 1f, 1f);
+			Color hue = Color.getHSBColor((float) ((1 - cycle) / 3), 1f, 1f);
 			outline = withAlpha(hue, outline.getAlpha());
 		}
 
@@ -371,7 +372,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 			graphics.setColor(withAlpha(outline, outline.getAlpha() / 3));
 			graphics.draw(shape);
 			graphics.setColor(outline);
-			drawPartial(graphics, shape, 1 - phase);
+			drawPartial(graphics, shape, 1 - cycle);
 		}
 		else
 		{

@@ -273,11 +273,11 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "tickCue",
-		name = "Tick cue",
+		name = "Mid-tick cue",
 		description = "Show progress through the click window on the hovered prayer."
-			+ "<br>Pulse: brightens at the pulse position in each click window"
-			+ "<br>Drain: outline shrinks as the click window runs out"
-			+ "<br>Color: outline goes green to red as the click window runs out",
+			+ "<br>Pulse: brightens at the cue position"
+			+ "<br>Drain: outline refills at the cue position, then shrinks"
+			+ "<br>Color: outline turns green at the cue position, then goes to red",
 		position = 6,
 		section = clickSection
 	)
@@ -290,7 +290,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 300)
 	@ConfigItem(
 		keyName = "tickLatency",
-		name = "Tick cue latency",
+		name = "Mid-tick cue latency",
 		description = "Your round-trip ping to the world. A click must reach the server before"
 			+ " its tick, so the click window closes this long before the client sees the next tick",
 		position = 7,
@@ -305,8 +305,8 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 90)
 	@ConfigItem(
 		keyName = "pulsePosition",
-		name = "Pulse position",
-		description = "Where in the click window the pulse fires. Slightly before the middle"
+		name = "Cue position",
+		description = "Where in the click window every cue mode kicks off. Slightly before the middle"
 			+ " leaves room for reaction time while early clicks stay in the same tick",
 		position = 8,
 		section = clickSection
