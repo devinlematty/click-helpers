@@ -33,7 +33,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 	private static final int EMPTY_SLOT_ITEM = 6512;
 
 	// Fraction of a tick the pulse cue stays visible
-	private static final double PULSE_LENGTH = 0.3;
+	private static final double PULSE_LENGTH = 0.25;
 
 	private static final int MARKER_SIZE = 6;
 
@@ -290,11 +290,18 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 	// Drawing
 
-	/** Progress through the current game tick, 0 at the start and 1 at the end. */
+	/**
+	 * Progress through the current click window, 0 when it opens and 1 when it
+	 * closes. A click reaches the server about one round trip after the client
+	 * sees a tick, so the window boundary is one round trip (the latency
+	 * setting) before each tick the client sees, not the tick itself.
+	 */
 	private double tickPhase(long now)
 	{
 		long elapsed = now - plugin.lastTickNanos + config.tickLatency() * 1_000_000L;
-		return Math.max(0, Math.min(1, (double) elapsed / InventoryHoverHighlightPlugin.TICK_NANOS));
+		double phase = (double) elapsed / InventoryHoverHighlightPlugin.TICK_NANOS;
+		// Wrap past the boundary, since the next tick arrives after the window closes
+		return phase - Math.floor(phase);
 	}
 
 	private void drawHighlight(Graphics2D graphics, Rectangle bounds, double phase)
@@ -308,12 +315,18 @@ class InventoryHoverHighlightOverlay extends Overlay
 			graphics.fill(fillShape(bounds));
 		}
 
-		if (cue == InventoryHoverHighlightConfig.TickCue.PULSE && phase < PULSE_LENGTH)
+		if (cue == InventoryHoverHighlightConfig.TickCue.PULSE)
 		{
-			Color outline = config.outlineColor();
-			double strength = 1 - phase / PULSE_LENGTH;
-			graphics.setColor(withAlpha(outline, (int) (outline.getAlpha() * 0.6 * strength)));
-			graphics.fill(fillShape(bounds));
+			// Time since the pulse point, as a fraction of the window
+			double sincePulse = phase - config.pulsePosition() / 100.0;
+			sincePulse -= Math.floor(sincePulse);
+			if (sincePulse < PULSE_LENGTH)
+			{
+				Color outline = config.outlineColor();
+				double strength = 1 - sincePulse / PULSE_LENGTH;
+				graphics.setColor(withAlpha(outline, (int) (outline.getAlpha() * 0.6 * strength)));
+				graphics.fill(fillShape(bounds));
+			}
 		}
 
 		if (style == InventoryHoverHighlightConfig.HighlightStyle.FILL)

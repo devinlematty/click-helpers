@@ -275,9 +275,9 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "tickCue",
 		name = "Tick cue",
 		description = "Show progress through the current game tick on the hover highlight."
-			+ "<br>Pulse: brightens at the start of each tick"
-			+ "<br>Drain: outline shrinks as the tick runs out"
-			+ "<br>Color: outline goes green to red as the tick runs out",
+			+ "<br>Pulse: brightens at the pulse position in each click window"
+			+ "<br>Drain: outline shrinks as the click window runs out"
+			+ "<br>Color: outline goes green to red as the click window runs out",
 		position = 6,
 		section = clickSection
 	)
@@ -291,7 +291,8 @@ public interface InventoryHoverHighlightConfig extends Config
 	@ConfigItem(
 		keyName = "tickLatency",
 		name = "Tick cue latency",
-		description = "Shifts the tick cue earlier to account for your ping",
+		description = "Your round-trip ping to the world. A click must reach the server before"
+			+ " its tick, so the click window closes this long before the client sees the next tick",
 		position = 7,
 		section = clickSection
 	)
@@ -300,11 +301,26 @@ public interface InventoryHoverHighlightConfig extends Config
 		return 0;
 	}
 
+	@Units(Units.PERCENT)
+	@Range(max = 90)
+	@ConfigItem(
+		keyName = "pulsePosition",
+		name = "Pulse position",
+		description = "Where in the click window the pulse fires. Slightly before the middle"
+			+ " leaves room for reaction time while early clicks stay in the same tick",
+		position = 8,
+		section = clickSection
+	)
+	default int pulsePosition()
+	{
+		return 40;
+	}
+
 	@ConfigItem(
 		keyName = "misclickGuard",
 		name = "Misclick guard",
 		description = "Show a red marker when the mouse is in a gap where a click does nothing",
-		position = 8,
+		position = 9,
 		section = clickSection
 	)
 	default boolean misclickGuard()
@@ -317,7 +333,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "misclickColor",
 		name = "Misclick color",
 		description = "Color of the misclick guard marker",
-		position = 9,
+		position = 10,
 		section = clickSection
 	)
 	default Color misclickColor()
