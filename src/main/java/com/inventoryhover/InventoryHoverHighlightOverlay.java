@@ -48,7 +48,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 		boolean tickCue;
 		/** Areas the hover highlight can fill. */
 		final List<Rectangle> targets = new ArrayList<>();
-		/** Every slot, including skipped ones, so the misclick guard ignores them. */
+		/** Every slot, including skipped ones, so dead area shading skips them. */
 		final List<Rectangle> slots = new ArrayList<>();
 		/** Slots with no item, where a click does nothing. */
 		final List<Rectangle> empties = new ArrayList<>();
