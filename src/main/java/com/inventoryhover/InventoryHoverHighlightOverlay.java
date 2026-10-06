@@ -50,6 +50,8 @@ class InventoryHoverHighlightOverlay extends Overlay
 		final List<Rectangle> targets = new ArrayList<>();
 		/** Every slot, including skipped ones, so the misclick guard ignores them. */
 		final List<Rectangle> slots = new ArrayList<>();
+		/** Slots with no item, where a click does nothing. */
+		final List<Rectangle> empties = new ArrayList<>();
 
 		Panel(Rectangle area)
 		{
@@ -73,6 +75,11 @@ class InventoryHoverHighlightOverlay extends Overlay
 	}
 
 	private final List<Trail> trails = new ArrayList<>();
+
+	/** Clicks that did nothing, as {x, y, nanoTime}. */
+	private final List<long[]> deadClicks = new ArrayList<>();
+
+	private static final int DEAD_CLICK_NANOS = 500_000_000;
 	private Rectangle lastTarget;
 	private boolean lastTickCue;
 
@@ -130,6 +137,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 		}
 
 		drawQueuedClicks(graphics);
+		drawDeadClicks(graphics, panels, now);
 		return null;
 	}
 
@@ -196,6 +204,10 @@ class InventoryHoverHighlightOverlay extends Overlay
 				slot.getHeight());
 
 			panel.slots.add(bounds);
+			if (slot.isSelfHidden() || isEmpty(slot))
+			{
+				panel.empties.add(bounds);
+			}
 			// The game hides the widget of an empty slot, so the hidden flag
 			// only matters when empty slots are excluded
 			if (!config.onlyItems() || (!slot.isSelfHidden() && !isEmpty(slot)))
@@ -452,6 +464,44 @@ class InventoryHoverHighlightOverlay extends Overlay
 			drawHighlight(graphics, trail.bounds, phase, trail.tickCue);
 		}
 		graphics.setComposite(original);
+	}
+
+	/** Red ring where a click landed on an empty slot or a gap with no interaction. */
+	private void drawDeadClicks(Graphics2D graphics, List<Panel> panels, long now)
+	{
+		for (long[] click; (click = plugin.mouseClicks.poll()) != null; )
+		{
+			if (!config.deadClickMarker())
+			{
+				continue;
+			}
+
+			Point at = new Point((int) click[0], (int) click[1]);
+			Panel panel = panelAt(panels, at);
+			if (panel != null && (smallestAt(panel.targets, at) == null || smallestAt(panel.empties, at) != null))
+			{
+				deadClicks.add(click);
+			}
+		}
+
+		Color color = config.misclickColor();
+		graphics.setStroke(new BasicStroke(2));
+		for (Iterator<long[]> it = deadClicks.iterator(); it.hasNext(); )
+		{
+			long[] click = it.next();
+			long age = now - click[2];
+			if (age >= DEAD_CLICK_NANOS)
+			{
+				it.remove();
+				continue;
+			}
+
+			double progress = (double) age / DEAD_CLICK_NANOS;
+			// Ring grows slightly while it fades
+			double radius = 5 + 4 * progress;
+			graphics.setColor(withAlpha(color, (int) (color.getAlpha() * (1 - progress))));
+			graphics.draw(new Ellipse2D.Double(click[0] - radius, click[1] - radius, radius * 2, radius * 2));
+		}
 	}
 
 	private void drawFlashes(Graphics2D graphics, long now)

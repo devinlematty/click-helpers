@@ -8,7 +8,11 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.awt.event.MouseEvent;
 import javax.inject.Inject;
+import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
 import net.runelite.api.EnumComposition;
 import net.runelite.api.GameState;
@@ -26,6 +30,8 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.input.MouseAdapter;
+import net.runelite.client.input.MouseManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -90,6 +96,29 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	private OverlayManager overlayManager;
 
 	@Inject
+	private MouseManager mouseManager;
+
+	/**
+	 * Left clicks as {x, y, nanoTime}, queued from the input thread. The overlay
+	 * decides on the client thread whether each one landed on a dead spot.
+	 */
+	final Queue<long[]> mouseClicks = new ConcurrentLinkedQueue<>();
+
+	private final MouseAdapter mouseListener = new MouseAdapter()
+	{
+		@Override
+		public MouseEvent mousePressed(MouseEvent e)
+		{
+			net.runelite.api.Point mouse = client.getMouseCanvasPosition();
+			if (SwingUtilities.isLeftMouseButton(e) && !client.isMenuOpen() && mouse != null)
+			{
+				mouseClicks.add(new long[]{mouse.getX(), mouse.getY(), System.nanoTime()});
+			}
+			return e;
+		}
+	};
+
+	@Inject
 	private InventoryHoverHighlightOverlay overlay;
 
 	/** Clicks to flash, oldest first. */
@@ -127,6 +156,7 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	protected void startUp()
 	{
 		overlayManager.add(overlay);
+		mouseManager.registerMouseListener(mouseListener);
 		lastTickNanos = System.nanoTime();
 		clientThread.invoke(this::updateAutocast);
 	}
@@ -136,6 +166,8 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	{
 		clientThread.invoke(this::restorePrayerGlows);
 		overlayManager.remove(overlay);
+		mouseManager.unregisterMouseListener(mouseListener);
+		mouseClicks.clear();
 		flashes.clear();
 		queuedClicks.clear();
 		pendingPrayers.clear();
