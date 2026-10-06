@@ -124,7 +124,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "hideWhenMenuOpen",
-		name = "Hide when menu open",
+		name = "Hide when right-click menu open",
 		description = "Do not highlight while a right-click menu is open",
 		position = 8
 	)

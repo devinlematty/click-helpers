@@ -16,7 +16,7 @@ modes are both supported because bounds come straight from the slot widgets.
 - **Bank inventory**: also highlight the inventory next to the bank
 - **Prayers**: also highlight the hovered prayer (on by default)
 - **Spells**: also highlight the hovered spell (on by default)
-- **Hide when menu open**: no highlight while a right-click menu is open
+- **Hide when right-click menu open**: no highlight while a right-click menu is open
 
 ## Run locally
 
