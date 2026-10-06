@@ -382,9 +382,9 @@ class InventoryHoverHighlightOverlay extends Overlay
 		{
 			if (cycle < PULSE_LENGTH)
 			{
-				Color outline = config.outlineColor();
+				Color pulse = config.pulseColor();
 				double strength = 1 - cycle / PULSE_LENGTH;
-				graphics.setColor(withAlpha(outline, (int) (outline.getAlpha() * 0.6 * strength)));
+				graphics.setColor(withAlpha(pulse, (int) (pulse.getAlpha() * strength)));
 				graphics.fill(fillShape(bounds));
 			}
 		}

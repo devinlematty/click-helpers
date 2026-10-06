@@ -101,7 +101,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	default Color fillColor()
 	{
-		return new Color(255, 255, 255, 30);
+		return new Color(150, 255, 150, 30);
 	}
 
 	@Range(max = 10)
@@ -300,6 +300,19 @@ public interface InventoryHoverHighlightConfig extends Config
 		return TickCue.PULSE;
 	}
 
+	@Alpha
+	@ConfigItem(
+		keyName = "pulseColor",
+		name = "Pulse color",
+		description = "Color of the mid-tick cue pulse",
+		position = 7,
+		section = clickSection
+	)
+	default Color pulseColor()
+	{
+		return new Color(200, 160, 255, 160);
+	}
+
 	@Units(Units.MILLISECONDS)
 	@Range(max = 300)
 	@ConfigItem(
@@ -307,12 +320,12 @@ public interface InventoryHoverHighlightConfig extends Config
 		name = "Mid-tick cue latency",
 		description = "Your round-trip ping to the world. A click must reach the server before"
 			+ " its tick, so the click window closes this long before the client sees the next tick",
-		position = 7,
+		position = 8,
 		section = clickSection
 	)
 	default int tickLatency()
 	{
-		return 0;
+		return 20;
 	}
 
 	@Units(Units.PERCENT)
@@ -322,7 +335,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		name = "Cue position",
 		description = "Where in the click window every cue mode kicks off. Slightly before the middle"
 			+ " leaves room for reaction time while early clicks stay in the same tick",
-		position = 8,
+		position = 9,
 		section = clickSection
 	)
 	default int pulsePosition()
@@ -334,12 +347,12 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "misclickGuard",
 		name = "Misclick guard",
 		description = "Show a red marker when the mouse is in a gap where a click does nothing",
-		position = 9,
+		position = 10,
 		section = clickSection
 	)
 	default boolean misclickGuard()
 	{
-		return true;
+		return false;
 	}
 
 	@ConfigItem(
@@ -359,7 +372,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "misclickColor",
 		name = "Misclick color",
 		description = "Color of the misclick guard and dead click markers",
-		position = 10,
+		position = 12,
 		section = clickSection
 	)
 	default Color misclickColor()
