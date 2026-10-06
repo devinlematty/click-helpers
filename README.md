@@ -10,6 +10,7 @@ modes are both supported because bounds come straight from the slot widgets.
 
 - **Style**: outline, fill, or both
 - **Outline / fill color** (with alpha)
+- **Corner radius**: 0 (square) to 10 px
 - **Outline width**: 1-4 px
 - **Only slots with items**: skip empty slots
 - **Bank inventory**: also highlight the inventory next to the bank

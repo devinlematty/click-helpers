@@ -27,7 +27,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	default HighlightStyle style()
 	{
-		return HighlightStyle.BOTH;
+		return HighlightStyle.OUTLINE;
 	}
 
 	@Alpha
@@ -39,7 +39,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	default Color outlineColor()
 	{
-		return new Color(255, 255, 0, 220);
+		return new Color(255, 255, 255, 120);
 	}
 
 	@Alpha
@@ -51,7 +51,19 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	default Color fillColor()
 	{
-		return new Color(255, 255, 0, 50);
+		return new Color(255, 255, 255, 30);
+	}
+
+	@Range(max = 10)
+	@ConfigItem(
+		keyName = "cornerRadius",
+		name = "Corner radius",
+		description = "Rounds the corners of the highlight; 0 for square",
+		position = 3
+	)
+	default int cornerRadius()
+	{
+		return 4;
 	}
 
 	@Range(min = 1, max = 4)

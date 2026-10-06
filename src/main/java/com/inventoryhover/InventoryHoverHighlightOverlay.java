@@ -4,6 +4,8 @@ import java.awt.BasicStroke;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.geom.RoundRectangle2D;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.Point;
@@ -195,11 +197,13 @@ class InventoryHoverHighlightOverlay extends Overlay
 	private void draw(Graphics2D graphics, Rectangle bounds)
 	{
 		InventoryHoverHighlightConfig.HighlightStyle style = config.style();
+		int arc = config.cornerRadius() * 2;
+		graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
 		if (style != InventoryHoverHighlightConfig.HighlightStyle.OUTLINE)
 		{
 			graphics.setColor(config.fillColor());
-			graphics.fill(bounds);
+			graphics.fill(new RoundRectangle2D.Float(bounds.x, bounds.y, bounds.width, bounds.height, arc, arc));
 		}
 
 		if (style != InventoryHoverHighlightConfig.HighlightStyle.FILL)
@@ -208,12 +212,13 @@ class InventoryHoverHighlightOverlay extends Overlay
 			graphics.setColor(config.outlineColor());
 			graphics.setStroke(new BasicStroke(width));
 			// Inset by half the stroke so the outline stays inside the clickable area
-			int inset = width / 2;
-			graphics.drawRect(
+			float inset = width / 2f;
+			graphics.draw(new RoundRectangle2D.Float(
 				bounds.x + inset,
 				bounds.y + inset,
-				bounds.width - 1 - inset * 2,
-				bounds.height - 1 - inset * 2);
+				bounds.width - width,
+				bounds.height - width,
+				arc, arc));
 		}
 	}
 }
