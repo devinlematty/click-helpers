@@ -15,6 +15,8 @@ straight from the game's widgets.
 - **Outline / fill color** (with alpha)
 - **Corner radius**: 0 (square) to 10 px
 - **Outline width**: 1-4 px
+- **Hover fade-out**: a highlight, including its tick cue, fades out over 400 ms after
+  the mouse leaves, so the cue stays visible while moving between prayers
 - **Hide when right-click menu open**: no highlight while a right-click menu is open (off by default)
 
 ### Areas
@@ -53,6 +55,8 @@ straight from the game's widgets.
 - **Active prayer highlight**: replaces the game's active prayer glow with a gold
   highlight that follows the server-confirmed prayer state, so it does not
   flicker when clicking fast
+- **Pending prayer state**: a dashed gold outline from your click until the server
+  confirms the change (dashed only when turning on, half fill when turning off)
 
 ## Run locally
 

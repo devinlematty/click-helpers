@@ -3,6 +3,7 @@ package com.inventoryhover;
 import com.google.inject.Provides;
 import java.awt.Rectangle;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -99,6 +100,20 @@ public class InventoryHoverHighlightPlugin extends Plugin
 
 	long lastTickNanos;
 
+	/** Prayer toggles clicked but not yet confirmed by the server. */
+	private final Map<Prayer, Pending> pendingPrayers = new EnumMap<>(Prayer.class);
+
+	private static class Pending
+	{
+		final boolean expected;
+		int ticks;
+
+		Pending(boolean expected)
+		{
+			this.expected = expected;
+		}
+	}
+
 	/** Component id of the spell set to autocast, or -1. */
 	int autocastComponent = -1;
 
@@ -123,6 +138,7 @@ public class InventoryHoverHighlightPlugin extends Plugin
 		overlayManager.remove(overlay);
 		flashes.clear();
 		queuedClicks.clear();
+		pendingPrayers.clear();
 		autocastComponent = -1;
 	}
 
@@ -161,6 +177,10 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	{
 		lastTickNanos = System.nanoTime();
 		queuedClicks.clear();
+
+		// Drop pending toggles once the server agrees, or after a couple of ticks
+		pendingPrayers.entrySet().removeIf(e ->
+			isPrayerActive(e.getKey()) == e.getValue().expected || ++e.getValue().ticks > 2);
 	}
 
 	@Subscribe
@@ -198,6 +218,15 @@ public class InventoryHoverHighlightPlugin extends Plugin
 
 		long now = System.nanoTime();
 		flashes.add(new Click(bounds, now, 1));
+
+		if (widget.getId() >>> 16 == PRAYER_GROUP)
+		{
+			Prayer prayer = prayerFor(widget);
+			if (prayer != null)
+			{
+				pendingPrayers.put(prayer, new Pending(!predictedActive(prayer)));
+			}
+		}
 
 		long key = ((long) widget.getId() << 16) | (widget.getIndex() & 0xffff);
 		Click queued = queuedClicks.get(key);
@@ -275,6 +304,13 @@ public class InventoryHoverHighlightPlugin extends Plugin
 		}
 		String key = Text.removeTags(widget.getName()).toUpperCase().replaceAll("[^A-Z0-9]+", "_");
 		return PRAYERS_BY_NAME.get(key);
+	}
+
+	/** Prayer state including clicks the server has not confirmed yet. */
+	boolean predictedActive(Prayer prayer)
+	{
+		Pending pending = pendingPrayers.get(prayer);
+		return pending != null ? pending.expected : isPrayerActive(prayer);
 	}
 
 	/** Server-confirmed prayer state, unaffected by the client's predicted toggle. */

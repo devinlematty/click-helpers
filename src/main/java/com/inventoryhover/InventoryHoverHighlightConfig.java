@@ -130,6 +130,20 @@ public interface InventoryHoverHighlightConfig extends Config
 		return 1;
 	}
 
+	@Units(Units.MILLISECONDS)
+	@Range(max = 2000)
+	@ConfigItem(
+		keyName = "hoverFade",
+		name = "Hover fade-out",
+		description = "How long a highlight, including its tick cue, fades after the mouse leaves; 0 to disable",
+		position = 6,
+		section = appearanceSection
+	)
+	default int hoverFade()
+	{
+		return 400;
+	}
+
 	@ConfigItem(
 		keyName = "hideWhenMenuOpen",
 		name = "Hide when right-click menu open",
@@ -437,10 +451,22 @@ public interface InventoryHoverHighlightConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "pendingPrayers",
+		name = "Pending prayer state",
+		description = "Show a dashed outline from your click until the server confirms the prayer change",
+		position = 7,
+		section = extrasSection
+	)
+	default boolean pendingPrayers()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 		keyName = "autocastMarker",
 		name = "Autocast marker",
 		description = "Outline the spell set to autocast; hovering it shows the hover highlight instead",
-		position = 7,
+		position = 8,
 		section = extrasSection
 	)
 	default boolean autocastMarker()
@@ -453,7 +479,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "autocastColor",
 		name = "Autocast color",
 		description = "Color of the autocast marker",
-		position = 8,
+		position = 9,
 		section = extrasSection
 	)
 	default Color autocastColor()

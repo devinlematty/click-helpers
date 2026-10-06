@@ -1,6 +1,8 @@
 package com.inventoryhover;
 
+import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
+import java.awt.Composite;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
@@ -55,6 +57,25 @@ class InventoryHoverHighlightOverlay extends Overlay
 		}
 	}
 
+	/** A recently hovered area that is fading out. */
+	private static class Trail
+	{
+		final Rectangle bounds;
+		final boolean tickCue;
+		final long leftAt;
+
+		Trail(Rectangle bounds, boolean tickCue, long leftAt)
+		{
+			this.bounds = bounds;
+			this.tickCue = tickCue;
+			this.leftAt = leftAt;
+		}
+	}
+
+	private final List<Trail> trails = new ArrayList<>();
+	private Rectangle lastTarget;
+	private boolean lastTickCue;
+
 	private final Client client;
 	private final InventoryHoverHighlightPlugin plugin;
 	private final InventoryHoverHighlightConfig config;
@@ -95,9 +116,13 @@ class InventoryHoverHighlightOverlay extends Overlay
 		drawAutocast(graphics, target);
 		drawFlashes(graphics, now);
 
+		double phase = tickPhase(now);
+		updateTrails(target, panel != null && panel.tickCue, now);
+		drawTrails(graphics, phase, now);
+
 		if (target != null)
 		{
-			drawHighlight(graphics, target, tickPhase(now), panel.tickCue);
+			drawHighlight(graphics, target, phase, panel.tickCue);
 		}
 		else if (panel != null && config.misclickGuard() && smallestAt(panel.slots, mouse) == null)
 		{
@@ -386,6 +411,49 @@ class InventoryHoverHighlightOverlay extends Overlay
 		}
 	}
 
+	/** Starts a fade-out for the previously hovered area when the hover moves. */
+	private void updateTrails(Rectangle target, boolean tickCue, long now)
+	{
+		if (lastTarget != null && !lastTarget.equals(target))
+		{
+			Rectangle left = lastTarget;
+			trails.removeIf(t -> t.bounds.equals(left));
+			if (config.hoverFade() > 0)
+			{
+				trails.add(new Trail(left, lastTickCue, now));
+			}
+		}
+		if (target != null)
+		{
+			// The live hover replaces any fade on the same area
+			trails.removeIf(t -> t.bounds.equals(target));
+		}
+		lastTarget = target;
+		lastTickCue = tickCue;
+	}
+
+	/** Draws recently hovered areas, including their tick cue, fading out. */
+	private void drawTrails(Graphics2D graphics, double phase, long now)
+	{
+		long duration = config.hoverFade() * 1_000_000L;
+		Composite original = graphics.getComposite();
+		for (Iterator<Trail> it = trails.iterator(); it.hasNext(); )
+		{
+			Trail trail = it.next();
+			long age = now - trail.leftAt;
+			if (age >= duration)
+			{
+				it.remove();
+				continue;
+			}
+
+			float strength = 1f - (float) age / duration;
+			graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, strength));
+			drawHighlight(graphics, trail.bounds, phase, trail.tickCue);
+		}
+		graphics.setComposite(original);
+	}
+
 	private void drawFlashes(Graphics2D graphics, long now)
 	{
 		if (!config.clickFlash())
@@ -500,7 +568,6 @@ class InventoryHoverHighlightOverlay extends Overlay
 		}
 
 		int width = config.outlineWidth();
-		graphics.setStroke(new BasicStroke(width));
 		for (int i = 0; i < InventoryHoverHighlightPlugin.PRAYER_COUNT; i++)
 		{
 			Widget widget = client.getWidget(InterfaceID.Prayerbook.PRAYER1 + i);
@@ -510,16 +577,42 @@ class InventoryHoverHighlightOverlay extends Overlay
 			}
 
 			Prayer prayer = plugin.prayerFor(widget);
-			if (prayer == null || !plugin.isPrayerActive(prayer))
+			if (prayer == null)
+			{
+				continue;
+			}
+
+			boolean confirmed = plugin.isPrayerActive(prayer);
+			boolean predicted = config.pendingPrayers() ? plugin.predictedActive(prayer) : confirmed;
+			if (!confirmed && !predicted)
 			{
 				continue;
 			}
 
 			Rectangle bounds = widget.getBounds();
-			graphics.setColor(config.activePrayerFill());
-			graphics.fill(fillShape(bounds));
+			Shape outline = outlineShape(bounds, width);
+			if (confirmed == predicted)
+			{
+				graphics.setColor(config.activePrayerFill());
+				graphics.fill(fillShape(bounds));
+				graphics.setStroke(new BasicStroke(width));
+				graphics.setColor(config.activePrayerColor());
+				graphics.draw(outline);
+				continue;
+			}
+
+			// Pending: the click is sent but the server has not confirmed it yet.
+			// Turning on: dashed outline only. Turning off: half fill, dashed outline.
+			if (confirmed)
+			{
+				Color fill = config.activePrayerFill();
+				graphics.setColor(withAlpha(fill, fill.getAlpha() / 2));
+				graphics.fill(fillShape(bounds));
+			}
+			graphics.setStroke(new BasicStroke(width, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER,
+				10f, new float[]{3f, 3f}, 0f));
 			graphics.setColor(config.activePrayerColor());
-			graphics.draw(outlineShape(bounds, width));
+			graphics.draw(outline);
 		}
 	}
 
