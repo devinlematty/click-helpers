@@ -42,7 +42,6 @@ straight from the game's widgets.
 - **Cue position**: where in the window every cue mode kicks off, 40% by default. Slightly
   before the middle leaves room for reaction time, while clicks that anticipate the
   beat a little early still land in the same tick
-- **Misclick guard**: a red X at the cursor when it is in a gap where a click does nothing
 - **Dead click marker**: a red ring where you click an empty slot or a gap with no interaction
 
 ### Extras

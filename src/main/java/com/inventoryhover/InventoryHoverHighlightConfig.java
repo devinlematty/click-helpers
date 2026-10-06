@@ -344,18 +344,6 @@ public interface InventoryHoverHighlightConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "misclickGuard",
-		name = "Misclick guard",
-		description = "Show a red marker when the mouse is in a gap where a click does nothing",
-		position = 10,
-		section = clickSection
-	)
-	default boolean misclickGuard()
-	{
-		return false;
-	}
-
-	@ConfigItem(
 		keyName = "deadClickMarker",
 		name = "Dead click marker",
 		description = "Show a red ring where you click an empty slot or a gap with no interaction",
@@ -370,8 +358,8 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "misclickColor",
-		name = "Misclick color",
-		description = "Color of the misclick guard and dead click markers",
+		name = "Dead click color",
+		description = "Color of the dead click marker",
 		position = 12,
 		section = clickSection
 	)

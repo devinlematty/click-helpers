@@ -132,10 +132,6 @@ class InventoryHoverHighlightOverlay extends Overlay
 		{
 			drawHighlight(graphics, target, phase, panel.tickCue);
 		}
-		else if (panel != null && config.misclickGuard() && smallestAt(panel.slots, mouse) == null)
-		{
-			drawMisclick(graphics, mouse);
-		}
 
 		drawQueuedClicks(graphics);
 		drawDeadClicks(graphics, panels, now);
@@ -689,15 +685,6 @@ class InventoryHoverHighlightOverlay extends Overlay
 		graphics.setStroke(new BasicStroke(width));
 		graphics.setColor(config.activePrayerColor());
 		graphics.draw(outlineShape(bounds, width));
-	}
-
-	private void drawMisclick(Graphics2D graphics, Point mouse)
-	{
-		int r = 4;
-		graphics.setColor(config.misclickColor());
-		graphics.setStroke(new BasicStroke(2));
-		graphics.drawLine(mouse.getX() - r, mouse.getY() - r, mouse.getX() + r, mouse.getY() + r);
-		graphics.drawLine(mouse.getX() - r, mouse.getY() + r, mouse.getX() + r, mouse.getY() - r);
 	}
 
 	private void drawAutocast(Graphics2D graphics, Rectangle hovered)
