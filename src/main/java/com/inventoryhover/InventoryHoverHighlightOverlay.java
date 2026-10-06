@@ -145,14 +145,28 @@ class InventoryHoverHighlightOverlay extends Overlay
 			return;
 		}
 
+		Point origin = container.getCanvasLocation();
+		if (origin == null)
+		{
+			return;
+		}
+
 		Panel panel = new Panel(container.getBounds());
 		for (Widget slot : slots)
 		{
-			Rectangle bounds = slot == null ? null : slot.getBounds();
-			if (bounds == null)
+			if (slot == null || slot.getWidth() <= 0 || slot.getHeight() <= 0)
 			{
 				continue;
 			}
+
+			// Hidden (empty) slots are not rendered, so getBounds() is stale for
+			// them. Build every slot from the container position plus the slot's
+			// layout offset, which the game keeps current even while hidden.
+			Rectangle bounds = new Rectangle(
+				origin.getX() + slot.getRelativeX(),
+				origin.getY() + slot.getRelativeY(),
+				slot.getWidth(),
+				slot.getHeight());
 
 			panel.slots.add(bounds);
 			// The game hides the widget of an empty slot, so the hidden flag
