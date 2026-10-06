@@ -349,7 +349,10 @@ class InventoryHoverHighlightOverlay extends Overlay
 			}
 		}
 
-		if (style == InventoryHoverHighlightConfig.HighlightStyle.FILL)
+		// Drain and Color are drawn on the outline, so they force it on even in fill-only style
+		boolean outlineCue = cue == InventoryHoverHighlightConfig.TickCue.DRAIN
+			|| cue == InventoryHoverHighlightConfig.TickCue.COLOR;
+		if (style == InventoryHoverHighlightConfig.HighlightStyle.FILL && !outlineCue)
 		{
 			return;
 		}
