@@ -12,6 +12,10 @@ you click.
   not flicker) and for a spell selected for manual casting
 - Optional mid-tick cue on prayers to help with prayer flicking
 - Miss markers, a floating click chart, and settings you can share
+- Per-tab settings for the inventory, prayer tab and spellbook, with an option to
+  keep all three in sync
+- Spotlight at the mouse, gear switch practice with progress tracking, and named
+  settings loadouts
 - Optional hiding of items you never click in a fight, and eat and drink delay shading
 
 Fixed and resizable modes are both supported because bounds come straight from
@@ -20,24 +24,9 @@ hiding only changes how icons are drawn; hidden items still work when clicked.
 
 ## Settings
 
-Settings are grouped in the same sections as the plugin's config panel.
-
-### Hover highlight
-
-- **Style**: outline, fill, or both
-- **Outline / fill color** (with alpha)
-- **Corner radius**: 0 (square) to 10 px
-- **Round grid and dead areas to highlight radius**: rounds the grid and dead area shading with the
-  hover highlight's corner radius (on by default). The game's clickable areas are
-  square, so slot corners can look dead even though clicks there still work
-- **Outline width**: 1-4 px
-- **Hover fade-out**: a highlight, including its tick cue, fades out over 400 ms
-  after the mouse leaves, so the cue stays visible while moving between prayers
-- **Hover delay**: how long the mouse must rest on an area before it is
-  highlighted (0 by default)
-- **Hide when right-click menu open**: no highlight while a right-click menu is
-  open (off by default)
-- **Disco mode**: a random hover color every time the mouse moves to a new area
+Settings are grouped in the same sections as the plugin's config panel. Hover,
+spotlight and miss dot settings are set per tab; see
+[Inventory, prayer and spellbook tabs](#inventory-prayer-and-spellbook-tabs).
 
 ### Areas
 
@@ -46,6 +35,9 @@ Settings are grouped in the same sections as the plugin's config panel.
 - **Clickable grid**: outlines every area the hover highlight can fill, either in
   the panel under the mouse or in every visible panel
 - **Grid on empty slots**: also outline inventory slots with no item
+- **Round grid and dead areas to highlight radius**: rounds the grid and dead area
+  shading with each tab's corner radius (on by default). The game's clickable
+  areas are square, so slot corners can look dead even though clicks there still work
 
 ### Click feedback
 
@@ -62,16 +54,18 @@ Settings are grouped in the same sections as the plugin's config panel.
   from the game's refusal message within two ticks of the click
 - **Ring duration / animation**: how long both markers last, and whether they
   grow, shrink, pulse or show as an X
-- **Miss dots**: a small dot stays at every dead click for a set time (15 s by
-  default), so you can see where your misses cluster
 - **Miss outline**: outlines the slot nearest a dead click, the one you most likely
   meant, in place of the normal outline until it fades
+- Miss dots are set per tab
 
 ### Dead areas
 
 - **Dead areas**: faint dark gray shading over the gaps where a click does nothing, in
   every visible panel (default) or only in the panel under the mouse
-- Each panel (inventory, bank inventory, prayers, spells) has its own on/off and color
+- Each panel (inventory, bank inventory, prayers, spells) has its own on/off and color.
+  The bank inventory shades its whole frame around the slots
+- **Cover whole prayer and spell tab**: also shades the rest of the tab, like the
+  space a filter leaves empty, and counts clicks there as misses
 
 ### Prayers and spells
 
@@ -104,10 +98,16 @@ Settings are grouped in the same sections as the plugin's config panel.
 ### Click chart
 
 - **Click chart**: a floating box (Alt-drag to move it) with your clean click rate
-  and one bar per 5 seconds over the last 2 minutes. Each bar stacks good clicks
-  (green), double clicks (orange), refused clicks (yellow) and missed clicks (red),
-  and a legend shows the count of each
+  and stacked bars of good clicks (green), double clicks (orange), refused clicks
+  (yellow) and missed clicks (red), with a legend of the count of each
 - **Click chart hotkey**: shows or hides the chart
+- **Time unit**: seconds or game ticks
+- **Bar interval / bars**: how many seconds or ticks each bar covers, and how many
+  bars to show; the chart covers bars times the interval (5 s x 24 bars by default)
+- **Moving average**: a line of the average clicks per bar over the last few bars
+- **Width / bar height**: size of the chart, for small screens. Text shortens to
+  fit narrow charts
+- **Legend / time labels**: hide either to make the chart smaller
 
 ### Hide items
 
@@ -127,19 +127,66 @@ Settings are grouped in the same sections as the plugin's config panel.
 - Shades food or potions while eating or drinking another one would be ignored.
   Items share a delay by their action: all food shares one, all potions share
   one, and karambwans have their own. Fill, drain or dim style
+- Follows the combo order: food, then a potion, then a karambwan can go in one
+  tick. A potion blocks food for the rest of its tick; a karambwan blocks food
+  for 3 ticks and potions for its tick
+- Fast foods use their own delay: pizzas and pies 1 tick (2 for the second half of
+  pizzas and apple, meat and redberry pies), cakes and giant crab meat 2 ticks
 
-### Spotlight
+### Switch practice
 
-- A light glow at the mouse that dims the panel outward, to show what is in
-  reach. Radius, glow and dim colors are configurable
+- Lights up random empty inventory slots to click as fast as you can, like a gear
+  switch. Clicks off the targets count as misses and show the usual miss markers
+- Each round records reaction time, switch time (first to last click), the ticks
+  the clicks spread over, and misses. Stats show above the inventory: the last
+  round, the session (average and best time, 1-tick rate, accuracy, timeouts), or both
+- Start and stop from the side panel or the **Practice hotkey**. Clicking an item
+  still uses it, so practice with free slots
+- Settings are on the side panel's Practice tab: slots per switch (1-28), pause
+  between rounds with an optional random extra pause, a round time limit in
+  seconds with a timer bar, rounds per session (the session stops and saves when
+  done), click in numbered order, and target and hit colors
+- The Practice tab also shows a chart of switch time and accuracy across your
+  last 50 sessions
 
 ### Import/export settings
 
 - **Export settings**: tick to export all plugin settings to the clipboard as
   readable JSON grouped by section, to share them
 - **Import settings**: tick to import shared JSON settings from the clipboard
+- Each box unticks itself and the result shows in chat
+- **Side panel**: turns the Click Helpers side panel on or off
 
-Each box unticks itself and the result shows in chat.
+### Side panel
+
+- **Loadouts tab**: Export and Import buttons; named loadouts that save every
+  current setting and load or delete them from a dropdown; and **Randomize all
+  settings**, which randomizes every setting except the click chart, hotkeys and
+  text lists, each tab on its own (it turns off tab sync). Loadouts are kept in RuneLite's
+  config, not in files
+- **Practice tab**: switch practice start button, session stats, progress chart
+  and practice settings
+
+### Inventory, prayer and spellbook tabs
+
+The inventory (and bank inventory), prayer tab and spellbook each have three
+sections of their own:
+
+- **Hover**: style (outline, fill or both), outline and fill colors, outline
+  width, corner radius, hover fade-out, hover delay, hide when a right-click menu
+  is open, disco mode with an optional color change interval, keep icon colors
+  on hover, and a slot background color with icons kept on top
+- **Spotlight**: a glow at the mouse that dims the panel outward. Radius (up to
+  2000 px), dim and glow colors, glow size (0 for dimming only), spotlight the
+  panel even when not hovered, only dim dead areas, and falloff: past the
+  falloff start the gradient runs in reverse, fading the dim out and a falloff
+  color in by the falloff end
+- **Miss dots**: a dot at every dead click, with color, shape (circle, ring,
+  square, diamond, triangle, cross, plus or heart), hollow, size and duration
+
+**Sync tab settings** keeps all three tabs the same: changing a setting in one
+tab changes it in the others, and turning it on copies the inventory settings to
+the others.
 
 ## Run locally
 

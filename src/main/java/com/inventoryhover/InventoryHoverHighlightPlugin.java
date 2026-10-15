@@ -1,10 +1,18 @@
 package com.inventoryhover;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 import com.google.inject.Provides;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -44,6 +52,9 @@ import net.runelite.client.input.MouseAdapter;
 import net.runelite.client.input.MouseManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.HotkeyListener;
 import net.runelite.client.util.Text;
@@ -71,6 +82,10 @@ public class InventoryHoverHighlightPlugin extends Plugin
 
 	// Ticks after eating or drinking before the next one of the same kind counts
 	static final int CONSUME_DELAY_TICKS = 3;
+
+	// Practice sessions kept for the progress chart
+	private static final int PRACTICE_HISTORY_SIZE = 50;
+	private static final String PRACTICE_HISTORY_KEY = "practiceHistory";
 
 	private static final Map<String, Prayer> PRAYERS_BY_NAME = new HashMap<>();
 
@@ -197,6 +212,35 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	@Inject
 	private SettingsSharing settingsSharing;
 
+	@Inject
+	private TabSettings tabSettings;
+
+	@Inject
+	private ClientToolbar clientToolbar;
+
+	@Inject
+	private ColorPickerManager colorPickerManager;
+
+	@Inject
+	private Gson gson;
+
+	private ClickHelpersPanel panel;
+	private NavigationButton navButton;
+
+	final SwitchPractice practice = new SwitchPractice();
+
+	/** Finished practice sessions, oldest first. Read on the Swing thread, so replaced, never changed. */
+	private volatile List<SwitchPractice.Summary> practiceHistory = List.of();
+
+	private final HotkeyListener practiceHotkey = new HotkeyListener(() -> config.practiceHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			togglePractice();
+		}
+	};
+
 	final ClickStats stats = new ClickStats();
 
 	/** Clicks to flash, oldest first. */
@@ -230,8 +274,8 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	/** Component id of the spell set to autocast, or -1. */
 	int autocastComponent = -1;
 
-	/** Tick count at which each eat or drink delay ends. */
-	private final Map<Consumable, Integer> consumeEnds = new EnumMap<>(Consumable.class);
+	/** Each running eat or drink delay as {start tick, end tick}. */
+	private final Map<Consumable, int[]> consumeDelays = new EnumMap<>(Consumable.class);
 
 	/** Consumable kind per item id, null when the item is neither food nor potion. */
 	private final Map<Integer, Consumable> consumableCache = new HashMap<>();
@@ -265,7 +309,27 @@ public class InventoryHoverHighlightPlugin extends Plugin
 		parseItemLists();
 		overlayManager.add(chartOverlay);
 		keyManager.registerKeyListener(clickChartHotkey);
+		keyManager.registerKeyListener(practiceHotkey);
 		clientThread.invoke(this::updateAutocast);
+
+		migrateToTabs();
+		practiceHistory = loadPracticeHistory();
+		panel = new ClickHelpersPanel(this, config, configManager, colorPickerManager);
+		navButton = NavigationButton.builder()
+			.tooltip("Click Helpers")
+			.icon(panelIcon())
+			.priority(10)
+			.panel(panel)
+			.build();
+		if (config.sidePanel())
+		{
+			clientToolbar.addNavigation(navButton);
+		}
+		if (config.practiceMode())
+		{
+			clientThread.invoke(() -> practice.start(System.nanoTime()));
+		}
+		refreshPanel();
 	}
 
 	@Override
@@ -281,6 +345,9 @@ public class InventoryHoverHighlightPlugin extends Plugin
 		keyManager.unregisterKeyListener(hideItemsHotkey);
 		overlayManager.remove(chartOverlay);
 		keyManager.unregisterKeyListener(clickChartHotkey);
+		keyManager.unregisterKeyListener(practiceHotkey);
+		clientToolbar.removeNavigation(navButton);
+		savePracticeSession();
 		stats.reset();
 		mouseClicks.clear();
 		flashes.clear();
@@ -288,9 +355,10 @@ public class InventoryHoverHighlightPlugin extends Plugin
 		rejectedClicks.clear();
 		lastClick = null;
 		pendingPrayers.clear();
-		consumeEnds.clear();
+		consumeDelays.clear();
 		consumableCache.clear();
 		hiddenCache.clear();
+		tabSettings.invalidate();
 		autocastComponent = -1;
 	}
 
@@ -323,6 +391,7 @@ public class InventoryHoverHighlightPlugin extends Plugin
 			return;
 		}
 
+		tabSettings.invalidate();
 		switch (event.getKey())
 		{
 			case "activePrayers":
@@ -340,6 +409,16 @@ public class InventoryHoverHighlightPlugin extends Plugin
 					hiddenCache.clear();
 				});
 				break;
+			case "sidePanel":
+				if (config.sidePanel())
+				{
+					clientToolbar.addNavigation(navButton);
+				}
+				else
+				{
+					clientToolbar.removeNavigation(navButton);
+				}
+				break;
 			// Action toggles: run once, then switch themselves back off
 			case "copySettings":
 				if (config.copySettings())
@@ -355,6 +434,32 @@ public class InventoryHoverHighlightPlugin extends Plugin
 					notify(settingsSharing.pasteFromClipboard());
 				}
 				break;
+			case "syncTabSettings":
+				if (config.syncTabSettings())
+				{
+					settingsSharing.syncAllTabs();
+				}
+				break;
+			default:
+				if (config.syncTabSettings())
+				{
+					settingsSharing.syncTabSetting(event.getKey(), event.getNewValue());
+				}
+				break;
+			case "practiceMode":
+				clientThread.invoke(() ->
+				{
+					if (config.practiceMode() && !practice.isActive())
+					{
+						practice.start(System.nanoTime());
+					}
+					else if (!config.practiceMode() && practice.isActive())
+					{
+						savePracticeSession();
+					}
+					refreshPanel();
+				});
+				break;
 		}
 	}
 
@@ -362,6 +467,7 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	public void onGameTick(GameTick event)
 	{
 		lastTickNanos = System.nanoTime();
+		stats.setTick(client.getTickCount());
 		queuedClicks.clear();
 
 		// Drop pending toggles once the server agrees, or after a couple of ticks
@@ -378,7 +484,7 @@ public class InventoryHoverHighlightPlugin extends Plugin
 		}
 		else if (event.getGameState() == GameState.LOGIN_SCREEN || event.getGameState() == GameState.HOPPING)
 		{
-			consumeEnds.clear();
+			consumeDelays.clear();
 		}
 	}
 
@@ -501,6 +607,179 @@ public class InventoryHoverHighlightPlugin extends Plugin
 			.build());
 	}
 
+	/**
+	 * Copies the old general hover, spotlight and miss dot settings into every
+	 * tab once, for tabs that did not use their own, so nothing changes after
+	 * the general settings were removed.
+	 */
+	private void migrateToTabs()
+	{
+		String group = InventoryHoverHighlightConfig.GROUP;
+		if (configManager.getConfiguration(group, "tabsMigrated") != null)
+		{
+			return;
+		}
+
+		Map<String, String[]> moved = Map.of(
+		"OwnHover", new String[]{"style", "outlineColor", "fillColor", "outlineWidth", "cornerRadius", "hoverFade", "hoverDelay", "hideWhenMenuOpen", "discoMode", "discoInterval", "keepIconColors"},
+		"OwnSpotlight", new String[]{"spotlight", "spotlightRadius", "spotlightDim", "spotlightGlow", "spotlightGlowSize", "spotlightAlways", "spotlightDeadOnly", "spotlightFalloff", "spotlightFalloffDistance"},
+		"OwnMissDots", new String[]{"missDots", "missDotColor", "missDotShape", "missDotSize", "missDotDuration"});
+		for (Map.Entry<String, String[]> entry : moved.entrySet())
+		{
+			for (String prefix : TabSettings.PREFIXES)
+			{
+				String own = configManager.getConfiguration(group, prefix + entry.getKey());
+				configManager.unsetConfiguration(group, prefix + entry.getKey());
+				if (Boolean.parseBoolean(own))
+				{
+					continue;
+				}
+				for (String key : entry.getValue())
+				{
+					String value = configManager.getConfiguration(group, key);
+					if (value != null)
+					{
+						configManager.setConfiguration(group, prefix + Character.toUpperCase(key.charAt(0)) + key.substring(1), value);
+					}
+				}
+			}
+			for (String key : entry.getValue())
+			{
+				configManager.unsetConfiguration(group, key);
+			}
+		}
+		configManager.setConfiguration(group, "tabsMigrated", true);
+	}
+
+	// Side panel
+
+	/** Saves, loads and deletes settings loadouts for the side panel. */
+	SettingsSharing loadouts()
+	{
+		return settingsSharing;
+	}
+
+	/** Exports the settings to the clipboard; returns a message for the player. */
+	String exportSettings()
+	{
+		String message = settingsSharing.copyToClipboard();
+		notify(message);
+		return message;
+	}
+
+	/** Imports settings from the clipboard; returns a message for the player. */
+	String importSettings()
+	{
+		String message = settingsSharing.pasteFromClipboard();
+		notify(message);
+		return message;
+	}
+
+	/** Starts or stops switch practice. */
+	void togglePractice()
+	{
+		configManager.setConfiguration(InventoryHoverHighlightConfig.GROUP, "practiceMode", !config.practiceMode());
+	}
+
+	void clearPracticeHistory()
+	{
+		practiceHistory = List.of();
+		configManager.unsetConfiguration(InventoryHoverHighlightConfig.GROUP, PRACTICE_HISTORY_KEY);
+		refreshPanel();
+	}
+
+	/** Called by the overlay when a practice round is done. */
+	void practiceRoundDone()
+	{
+		refreshPanel();
+	}
+
+	/** Called by the overlay when the set number of rounds is done; ends and saves the session. */
+	void practiceSessionDone()
+	{
+		SwitchPractice.Summary summary = practice.summary();
+		if (summary != null)
+		{
+			notify(String.format("Switch practice done: %d rounds, %.0f ms average (best %d ms),"
+					+ " %.0f%% in 1 tick, %.0f%% accuracy, %d timeouts.",
+				summary.rounds, summary.switchMillis, summary.bestSwitchMillis, summary.oneTickRate,
+				summary.accuracy, summary.timeouts));
+		}
+		savePracticeSession();
+		configManager.setConfiguration(InventoryHoverHighlightConfig.GROUP, "practiceMode", false);
+		refreshPanel();
+	}
+
+	/** Ends the practice session and adds it to the history when it has a finished round. */
+	private void savePracticeSession()
+	{
+		if (!practice.isActive())
+		{
+			return;
+		}
+
+		SwitchPractice.Summary summary = practice.stop();
+		if (summary == null)
+		{
+			return;
+		}
+
+		List<SwitchPractice.Summary> history = new ArrayList<>(practiceHistory);
+		history.add(summary);
+		while (history.size() > PRACTICE_HISTORY_SIZE)
+		{
+			history.remove(0);
+		}
+		practiceHistory = Collections.unmodifiableList(history);
+		configManager.setConfiguration(InventoryHoverHighlightConfig.GROUP, PRACTICE_HISTORY_KEY, gson.toJson(history));
+	}
+
+	private List<SwitchPractice.Summary> loadPracticeHistory()
+	{
+		String json = configManager.getConfiguration(InventoryHoverHighlightConfig.GROUP, PRACTICE_HISTORY_KEY);
+		if (json == null || json.isEmpty())
+		{
+			return List.of();
+		}
+		try
+		{
+			SwitchPractice.Summary[] sessions = gson.fromJson(json, SwitchPractice.Summary[].class);
+			return sessions == null ? List.of() : List.of(sessions);
+		}
+		catch (JsonParseException e)
+		{
+			return List.of();
+		}
+	}
+
+	private void refreshPanel()
+	{
+		ClickHelpersPanel target = panel;
+		if (target == null)
+		{
+			return;
+		}
+		boolean practicing = practice.isActive();
+		SwitchPractice.Summary current = practice.summary();
+		List<SwitchPractice.Summary> history = practiceHistory;
+		SwingUtilities.invokeLater(() -> target.update(practicing, current, history));
+	}
+
+	/** Side panel icon: a cursor dot inside a slot outline. */
+	private static BufferedImage panelIcon()
+	{
+		BufferedImage image = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = image.createGraphics();
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		g.setColor(new Color(98, 189, 125));
+		g.setStroke(new BasicStroke(1.5f));
+		g.drawRoundRect(1, 2, 13, 11, 4, 4);
+		g.setColor(Color.WHITE);
+		g.fillOval(6, 6, 4, 4);
+		g.dispose();
+		return image;
+	}
+
 	// Eat and drink delays
 
 	/** Starts the eat or drink delay; returns true when the click falls in a running delay. */
@@ -525,15 +804,80 @@ public class InventoryHoverHighlightPlugin extends Plugin
 		{
 			return true;
 		}
-		consumeEnds.put(kind, client.getTickCount() + CONSUME_DELAY_TICKS);
+
+		// Food, then a potion, then a karambwan can all go in one tick, but not in
+		// another order: a potion blocks food for the rest of its tick, and a
+		// karambwan blocks food for its whole delay and potions for its tick
+		int tick = client.getTickCount();
+		switch (kind)
+		{
+			case FOOD:
+				extendDelay(Consumable.FOOD, tick, foodDelayTicks(client.getItemDefinition(itemId).getName()));
+				break;
+			case POTION:
+				extendDelay(Consumable.POTION, tick, CONSUME_DELAY_TICKS);
+				extendDelay(Consumable.FOOD, tick, 1);
+				break;
+			case COMBO_FOOD:
+				extendDelay(Consumable.COMBO_FOOD, tick, CONSUME_DELAY_TICKS);
+				extendDelay(Consumable.FOOD, tick, CONSUME_DELAY_TICKS);
+				extendDelay(Consumable.POTION, tick, 1);
+				break;
+		}
 		return false;
+	}
+
+	/** Makes a delay last at least {@code ticks} from {@code tick}. */
+	private void extendDelay(Consumable kind, int tick, int ticks)
+	{
+		int[] delay = consumeDelays.get(kind);
+		if (delay == null || delay[1] < tick + ticks)
+		{
+			consumeDelays.put(kind, new int[]{tick, tick + ticks});
+		}
+	}
+
+	/**
+	 * Eat delay of a food by name. Most food is 3 ticks; pies, pizzas, cakes and
+	 * giant crab meat are faster.
+	 */
+	static int foodDelayTicks(String name)
+	{
+		String n = name.toLowerCase();
+		boolean half = n.startsWith("half ") || n.startsWith("1/2 ");
+		if (n.contains("giant crab meat"))
+		{
+			return 2;
+		}
+		if (n.endsWith(" pizza"))
+		{
+			return half ? 2 : 1;
+		}
+		if (n.endsWith(" pie"))
+		{
+			// Apple, meat and redberry pies take 2 ticks for the second half; members' pies 1
+			boolean slowHalf = n.endsWith("apple pie") || n.endsWith("meat pie") || n.endsWith("redberry pie");
+			return half && slowHalf ? 2 : 1;
+		}
+		if (n.equals("cake") || n.equals("2/3 cake") || n.equals("chocolate cake") || n.equals("2/3 chocolate cake"))
+		{
+			return 2;
+		}
+		return CONSUME_DELAY_TICKS;
 	}
 
 	/** Ticks left on a delay, counting the current tick as a whole one, or 0. */
 	int consumeRemaining(Consumable kind)
 	{
-		Integer end = consumeEnds.get(kind);
-		return end == null ? 0 : Math.max(0, end - client.getTickCount());
+		int[] delay = consumeDelays.get(kind);
+		return delay == null ? 0 : Math.max(0, delay[1] - client.getTickCount());
+	}
+
+	/** Full length in ticks of the running delay, for drawing how much is left. */
+	int consumeLength(Consumable kind)
+	{
+		int[] delay = consumeDelays.get(kind);
+		return delay == null ? CONSUME_DELAY_TICKS : Math.max(1, delay[1] - delay[0]);
 	}
 
 	/** The delay an item shares, from its inventory actions, or null. */

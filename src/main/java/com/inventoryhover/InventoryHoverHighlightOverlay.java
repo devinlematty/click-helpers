@@ -5,6 +5,7 @@ import java.awt.BasicStroke;
 import java.awt.Composite;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Paint;
 import java.awt.RadialGradientPaint;
@@ -17,15 +18,17 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
-import java.util.Set;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.Point;
@@ -34,6 +37,8 @@ import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetType;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.SpriteManager;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -50,7 +55,8 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 	private static final int MARKER_SIZE = 6;
 
-	private static final int MISS_DOT_SIZE = 4;
+	// How long a clicked practice target keeps glowing
+	private static final long PRACTICE_HIT_NANOS = 400_000_000L;
 
 	// Game popups inside tracked panels that must stay readable: spell and prayer
 	// descriptions and filter menus
@@ -73,6 +79,8 @@ class InventoryHoverHighlightOverlay extends Overlay
 	private static class Panel
 	{
 		final PanelKind kind;
+		/** Prefix of the tab settings this panel uses. */
+		final String tab;
 		final Rectangle area;
 		/** Whether the tick cue applies; only the prayer tab, where flicking happens. */
 		boolean tickCue;
@@ -84,11 +92,18 @@ class InventoryHoverHighlightOverlay extends Overlay
 		final List<Rectangle> empties = new ArrayList<>();
 		/** Slot widgets holding an item, with their bounds. */
 		final List<ItemSlot> items = new ArrayList<>();
+		/** Other clickable areas, like filter buttons, that are neither dead nor hover targets. */
+		final List<Rectangle> others = new ArrayList<>();
+		/** Widget of each target, for drawing its icon again. */
+		final Map<Rectangle, Widget> widgets = new HashMap<>();
 
 		Panel(PanelKind kind, Rectangle area)
 		{
 			this.kind = kind;
 			this.area = area;
+			this.tab = kind == PanelKind.PRAYERS ? TabSettings.PRAYERS
+				: kind == PanelKind.SPELLS ? TabSettings.SPELLS
+				: TabSettings.INVENTORY;
 		}
 	}
 
@@ -159,8 +174,15 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 	private final List<MissDot> missDots = new ArrayList<>();
 
+	/** Panels of the frame being drawn. */
+	private List<Panel> framePanels = new ArrayList<>();
+
+	/** Practice targets clicked recently, glowing in the hit color. */
+	private final List<Mark> practiceHits = new ArrayList<>();
+
 	private Rectangle lastTarget;
 	private boolean lastTickCue;
+	private PanelKind lastKind;
 
 	/** Area under the mouse that is waiting out the hover delay. */
 	private Rectangle hoverCandidate;
@@ -168,20 +190,25 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 	private final Random random = new Random();
 	private Color discoColor = Color.WHITE;
+	private long discoSince;
 
 	private final Client client;
 	private final InventoryHoverHighlightPlugin plugin;
 	private final InventoryHoverHighlightConfig config;
 	private final ItemManager itemManager;
+	private final SpriteManager spriteManager;
+	private final TabSettings tabs;
 
 	@Inject
 	InventoryHoverHighlightOverlay(Client client, InventoryHoverHighlightPlugin plugin,
-		InventoryHoverHighlightConfig config, ItemManager itemManager)
+		InventoryHoverHighlightConfig config, ItemManager itemManager, SpriteManager spriteManager, TabSettings tabs)
 	{
 		this.client = client;
 		this.plugin = plugin;
 		this.config = config;
 		this.itemManager = itemManager;
+		this.spriteManager = spriteManager;
+		this.tabs = tabs;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_WIDGETS);
 	}
@@ -193,17 +220,20 @@ class InventoryHoverHighlightOverlay extends Overlay
 		long now = System.nanoTime();
 
 		List<Panel> panels = collectPanels();
+		framePanels = panels;
 
 		Point mouse = client.getMouseCanvasPosition();
-		boolean hoverEnabled = mouse != null && mouse.getX() >= 0 && mouse.getY() >= 0
-			&& !(config.hideWhenMenuOpen() && client.isMenuOpen());
+		boolean hoverEnabled = mouse != null && mouse.getX() >= 0 && mouse.getY() >= 0;
 
 		Panel panel = null;
 		Rectangle candidate = null;
 		if (hoverEnabled)
 		{
 			panel = panelAt(panels, mouse);
-			candidate = panel == null ? null : smallestAt(panel.targets, mouse);
+			if (panel != null && !(tabOf(panel.kind).hideWhenMenuOpen && client.isMenuOpen()))
+			{
+				candidate = smallestAt(panel.targets, mouse);
+			}
 		}
 
 		// Never draw over the game's own popups
@@ -222,17 +252,12 @@ class InventoryHoverHighlightOverlay extends Overlay
 			}
 		}
 
-		Rectangle target = applyHoverDelay(candidate, now);
-		if (config.discoMode() && target != null && !target.equals(lastTarget))
-		{
-			discoColor = Color.getHSBColor(random.nextFloat(), 0.85f, 1f);
-		}
+		Rectangle target = applyHoverDelay(candidate, panel == null ? 0 : tabOf(panel.kind).hoverDelay, now);
+		updateDisco(target, panel, now);
 
 		drawDeadAreas(graphics, panels, panel);
-		if (panel != null)
-		{
-			drawSpotlight(graphics, panel, mouse);
-		}
+		drawSlotBackgrounds(graphics, panels);
+		drawSpotlights(graphics, panels, panel, mouse);
 		drawHiddenItems(graphics, panels);
 		drawCooldowns(graphics, panels, now);
 		drawGrid(graphics, panels, panel, target);
@@ -243,16 +268,18 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 		double phase = tickPhase(now);
 		drawPrayerBookCue(graphics, panels, target, phase);
-		updateTrails(target, panel != null && panel.tickCue, now);
-		drawTrails(graphics, phase, now);
+		updateTrails(target, panel, now);
+		drawTrails(graphics, panels, phase, now);
 
 		if (target != null)
 		{
-			drawHighlight(graphics, target, phase, panel.tickCue, false);
+			drawHighlight(graphics, target, phase, panel.tickCue, false, panel);
 		}
 
 		drawQueuedClicks(graphics);
+		updatePractice(panels, now);
 		processClicks(panels, popups);
+		drawPractice(graphics, panels, now);
 		drawMissDots(graphics, panels, now);
 		drawMissOutlines(graphics, panels, now);
 		drawRings(graphics, deadClicks, config.misclickColor(), now);
@@ -261,15 +288,33 @@ class InventoryHoverHighlightOverlay extends Overlay
 		return null;
 	}
 
+	/** Picks a new disco color on a new hovered area, or when the disco interval runs out. */
+	private void updateDisco(Rectangle target, Panel panel, long now)
+	{
+		TabSettings.Tab tab = tabOf(panel == null ? null : panel.kind);
+		if (!tab.discoMode || target == null)
+		{
+			return;
+		}
+
+		boolean newArea = !target.equals(lastTarget);
+		boolean expired = tab.discoInterval > 0 && now - discoSince >= tab.discoInterval * 1_000_000L;
+		if (newArea || expired)
+		{
+			discoColor = Color.getHSBColor(random.nextFloat(), 0.85f, 1f);
+			discoSince = now;
+		}
+	}
+
 	/** The hovered area once the mouse has rested on it for the hover delay, or null. */
-	private Rectangle applyHoverDelay(Rectangle candidate, long now)
+	private Rectangle applyHoverDelay(Rectangle candidate, int delayMillis, long now)
 	{
 		if (!Objects.equals(candidate, hoverCandidate))
 		{
 			hoverCandidate = candidate;
 			hoverSince = now;
 		}
-		if (candidate == null || now - hoverSince < config.hoverDelay() * 1_000_000L)
+		if (candidate == null || now - hoverSince < delayMillis * 1_000_000L)
 		{
 			return null;
 		}
@@ -334,27 +379,63 @@ class InventoryHoverHighlightOverlay extends Overlay
 	private List<Panel> collectPanels()
 	{
 		List<Panel> panels = new ArrayList<>();
-		addSlotPanel(panels, PanelKind.INVENTORY, InterfaceID.Inventory.ITEMS);
+		addSlotPanel(panels, PanelKind.INVENTORY, InterfaceID.Inventory.ITEMS, -1);
 		if (config.bankInventory())
 		{
-			addSlotPanel(panels, PanelKind.BANK, InterfaceID.Bankside.ITEMS);
+			// The bank inventory's item layer hugs its slots, so its frame is what holds the gaps
+			addSlotPanel(panels, PanelKind.BANK, InterfaceID.Bankside.ITEMS, InterfaceID.Bankside.ITEMS_CONTAINER);
 		}
+		boolean outer = config.deadOuterAreas();
 		if (config.prayers())
 		{
-			addClickablePanel(panels, PanelKind.PRAYERS, InterfaceID.Prayerbook.CONTAINER);
+			addClickablePanel(panels, PanelKind.PRAYERS, InterfaceID.Prayerbook.CONTAINER,
+				outer ? InterfaceID.Prayerbook.UNIVERSE : -1);
 		}
 		if (config.spells())
 		{
-			addClickablePanel(panels, PanelKind.SPELLS, InterfaceID.MagicSpellbook.SPELLLAYER);
+			addClickablePanel(panels, PanelKind.SPELLS, InterfaceID.MagicSpellbook.SPELLLAYER,
+				outer ? InterfaceID.MagicSpellbook.UNIVERSE : -1);
 		}
 		return panels;
+	}
+
+	/**
+	 * Widens a panel to an outer widget, like the whole tab. The outer widget's
+	 * other clickable parts, like filter buttons, are kept apart so they are
+	 * neither shaded nor counted as misses.
+	 */
+	private static Rectangle outerArea(Rectangle area, Widget outer)
+	{
+		if (outer == null || outer.isHidden() || outer.getBounds() == null)
+		{
+			return area;
+		}
+		return area.union(outer.getBounds());
+	}
+
+	private static void addOthers(Panel panel, Widget outer)
+	{
+		if (outer == null || outer.isHidden())
+		{
+			return;
+		}
+
+		Map<Rectangle, Widget> found = new LinkedHashMap<>();
+		collectClickable(outer, found);
+		for (Rectangle r : found.keySet())
+		{
+			if (!panel.slots.contains(r) && !panel.targets.contains(r))
+			{
+				panel.others.add(r);
+			}
+		}
 	}
 
 	/**
 	 * Adds an item container panel. Each dynamic child of the container is one
 	 * slot, and its bounds are the exact area the client accepts clicks in.
 	 */
-	private void addSlotPanel(List<Panel> panels, PanelKind kind, int containerId)
+	private void addSlotPanel(List<Panel> panels, PanelKind kind, int containerId, int outerId)
 	{
 		Widget container = client.getWidget(containerId);
 		if (container == null || container.isHidden() || container.getBounds() == null)
@@ -374,7 +455,8 @@ class InventoryHoverHighlightOverlay extends Overlay
 			return;
 		}
 
-		Panel panel = new Panel(kind, container.getBounds());
+		Widget outer = outerId == -1 ? null : client.getWidget(outerId);
+		Panel panel = new Panel(kind, outerArea(container.getBounds(), outer));
 		for (Widget slot : slots)
 		{
 			if (slot == null || slot.getWidth() <= 0 || slot.getHeight() <= 0)
@@ -400,6 +482,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 			else
 			{
 				panel.items.add(new ItemSlot(slot, bounds));
+				panel.widgets.put(bounds, slot);
 			}
 			// The game hides the widget of an empty slot, so the hidden flag
 			// only matters when empty slots are excluded
@@ -408,6 +491,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 				panel.targets.add(bounds);
 			}
 		}
+		addOthers(panel, outer);
 		panels.add(panel);
 	}
 
@@ -416,7 +500,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 	 * read live each frame, so this follows the prayer/spellbook layout when it
 	 * is filtered or resized.
 	 */
-	private void addClickablePanel(List<Panel> panels, PanelKind kind, int rootId)
+	private void addClickablePanel(List<Panel> panels, PanelKind kind, int rootId, int outerId)
 	{
 		Widget root = client.getWidget(rootId);
 		if (root == null || root.isHidden() || root.getBounds() == null)
@@ -424,16 +508,18 @@ class InventoryHoverHighlightOverlay extends Overlay
 			return;
 		}
 
-		Set<Rectangle> found = new LinkedHashSet<>();
+		Map<Rectangle, Widget> found = new LinkedHashMap<>();
 		collectClickable(root, found);
 
-		Panel panel = new Panel(kind, root.getBounds());
+		Widget outer = outerId == -1 ? null : client.getWidget(outerId);
+		Panel panel = new Panel(kind, outerArea(root.getBounds(), outer));
 		panel.tickCue = kind == PanelKind.PRAYERS;
 		// A clickable widget can contain a smaller clickable child; keep only the innermost
-		for (Rectangle r : found)
+		for (Map.Entry<Rectangle, Widget> entry : found.entrySet())
 		{
+			Rectangle r = entry.getKey();
 			boolean containsOther = false;
-			for (Rectangle other : found)
+			for (Rectangle other : found.keySet())
 			{
 				if (other != r && r.contains(other))
 				{
@@ -444,13 +530,15 @@ class InventoryHoverHighlightOverlay extends Overlay
 			if (!containsOther)
 			{
 				panel.targets.add(r);
+				panel.widgets.put(r, entry.getValue());
 			}
 		}
 		panel.slots.addAll(panel.targets);
+		addOthers(panel, outer);
 		panels.add(panel);
 	}
 
-	private static void collectClickable(Widget widget, Set<Rectangle> found)
+	private static void collectClickable(Widget widget, Map<Rectangle, Widget> found)
 	{
 		if (widget == null || widget.isSelfHidden())
 		{
@@ -460,7 +548,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 		Rectangle bounds = widget.getBounds();
 		if (bounds != null && bounds.width > 0 && bounds.height > 0 && isClickable(widget))
 		{
-			found.add(bounds);
+			found.putIfAbsent(bounds, widget);
 		}
 
 		collectClickable(widget.getStaticChildren(), found);
@@ -468,7 +556,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 		collectClickable(widget.getNestedChildren(), found);
 	}
 
-	private static void collectClickable(Widget[] widgets, Set<Rectangle> found)
+	private static void collectClickable(Widget[] widgets, Map<Rectangle, Widget> found)
 	{
 		if (widgets != null)
 		{
@@ -580,21 +668,23 @@ class InventoryHoverHighlightOverlay extends Overlay
 	 * Draws the hover highlight. With {@code cueOnly}, draws only the tick cue,
 	 * for prayers that are not hovered.
 	 */
-	private void drawHighlight(Graphics2D graphics, Rectangle bounds, double phase, boolean useTickCue, boolean cueOnly)
+	private void drawHighlight(Graphics2D graphics, Rectangle bounds, double phase, boolean useTickCue, boolean cueOnly,
+		Panel panel)
 	{
 		// Every cue mode restarts at the cue position: 0 at the cue point, 1 just before the next
 		double cycle = phase - config.pulsePosition() / 100.0;
 		cycle -= Math.floor(cycle);
 
-		InventoryHoverHighlightConfig.HighlightStyle style = config.style();
+		TabSettings.Tab tab = tabOf(panel == null ? null : panel.kind);
+		InventoryHoverHighlightConfig.HighlightStyle style = tab.style;
 		InventoryHoverHighlightConfig.TickCue cue = useTickCue
 			? config.tickCue()
 			: InventoryHoverHighlightConfig.TickCue.OFF;
 
 		if (!cueOnly && style != InventoryHoverHighlightConfig.HighlightStyle.OUTLINE)
 		{
-			graphics.setColor(hoverColor(config.fillColor()));
-			graphics.fill(fillShape(bounds));
+			graphics.setColor(hoverColor(tab.fillColor, tab));
+			graphics.fill(fillShape(bounds, tab.cornerRadius));
 		}
 
 		if (cue == InventoryHoverHighlightConfig.TickCue.PULSE)
@@ -604,8 +694,14 @@ class InventoryHoverHighlightOverlay extends Overlay
 				Color pulse = config.pulseColor();
 				double strength = 1 - cycle / PULSE_LENGTH;
 				graphics.setColor(withAlpha(pulse, (int) (pulse.getAlpha() * strength)));
-				graphics.fill(fillShape(bounds));
+				graphics.fill(fillShape(bounds, tab.cornerRadius));
 			}
+		}
+
+		// Keep the icon's own colors by drawing it again over the fill
+		if (!cueOnly && panel != null && tab.keepIconColors)
+		{
+			drawIcon(graphics, panel, bounds);
 		}
 
 		// Drain and Color are drawn on the outline, so they force it on even in fill-only style
@@ -621,7 +717,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 			return;
 		}
 
-		Color outline = hoverColor(config.outlineColor());
+		Color outline = hoverColor(tab.outlineColor, tab);
 		if (cue == InventoryHoverHighlightConfig.TickCue.COLOR)
 		{
 			// Hue from green (1/3) at the start of the tick to red (0) at the end
@@ -629,9 +725,9 @@ class InventoryHoverHighlightOverlay extends Overlay
 			outline = withAlpha(hue, outline.getAlpha());
 		}
 
-		int width = config.outlineWidth();
+		int width = tab.outlineWidth;
 		graphics.setStroke(new BasicStroke(width));
-		Shape shape = outlineShape(bounds, width);
+		Shape shape = outlineShape(bounds, width, tab.cornerRadius);
 
 		if (cue == InventoryHoverHighlightConfig.TickCue.DRAIN)
 		{
@@ -649,9 +745,9 @@ class InventoryHoverHighlightOverlay extends Overlay
 	}
 
 	/** A hover color, swapped for the disco color in disco mode with the same alpha. */
-	private Color hoverColor(Color color)
+	private Color hoverColor(Color color, TabSettings.Tab tab)
 	{
-		return config.discoMode() ? withAlpha(discoColor, color.getAlpha()) : color;
+		return tab.discoMode ? withAlpha(discoColor, color.getAlpha()) : color;
 	}
 
 	/** Tick cue on the listed prayers that are not hovered. */
@@ -663,6 +759,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 			return;
 		}
 
+		Panel prayers = panelOf(panels, PanelKind.PRAYERS);
 		for (int i = 0; i < InventoryHoverHighlightPlugin.PRAYER_COUNT; i++)
 		{
 			Widget widget = client.getWidget(InterfaceID.Prayerbook.PRAYER1 + i);
@@ -675,21 +772,21 @@ class InventoryHoverHighlightOverlay extends Overlay
 			String name = Text.removeTags(widget.getName());
 			if (!bounds.equals(target) && plugin.cuePrayers.stream().anyMatch(p -> WildcardMatcher.matches(p, name)))
 			{
-				drawHighlight(graphics, bounds, phase, true, true);
+				drawHighlight(graphics, bounds, phase, true, true, prayers);
 			}
 		}
 	}
 
 	/** Starts a fade-out for the previously hovered area when the hover moves. */
-	private void updateTrails(Rectangle target, boolean tickCue, long now)
+	private void updateTrails(Rectangle target, Panel panel, long now)
 	{
 		if (lastTarget != null && !lastTarget.equals(target))
 		{
 			Rectangle left = lastTarget;
 			trails.removeIf(t -> t.bounds.equals(left));
-			if (config.hoverFade() > 0)
+			if (tabOf(lastKind).hoverFade > 0)
 			{
-				trails.add(new Mark(left, lastTickCue, now));
+				trails.add(new Mark(left, lastTickCue, now, lastKind));
 			}
 		}
 		if (target != null)
@@ -698,17 +795,18 @@ class InventoryHoverHighlightOverlay extends Overlay
 			trails.removeIf(t -> t.bounds.equals(target));
 		}
 		lastTarget = target;
-		lastTickCue = tickCue;
+		lastTickCue = panel != null && panel.tickCue;
+		lastKind = panel == null ? null : panel.kind;
 	}
 
 	/** Draws recently hovered areas, including their tick cue, fading out. */
-	private void drawTrails(Graphics2D graphics, double phase, long now)
+	private void drawTrails(Graphics2D graphics, List<Panel> panels, double phase, long now)
 	{
-		long duration = config.hoverFade() * 1_000_000L;
 		Composite original = graphics.getComposite();
 		for (Iterator<Mark> it = trails.iterator(); it.hasNext(); )
 		{
 			Mark trail = it.next();
+			long duration = tabOf(trail.kind).hoverFade * 1_000_000L;
 			long age = now - trail.time;
 			if (age >= duration)
 			{
@@ -718,7 +816,8 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 			float strength = 1f - (float) age / duration;
 			graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, strength));
-			drawHighlight(graphics, trail.bounds, phase, trail.tickCue, false);
+			drawHighlight(graphics, trail.bounds, phase, trail.tickCue, false,
+				trail.kind == null ? null : panelOf(panels, trail.kind));
 		}
 		graphics.setComposite(original);
 	}
@@ -738,17 +837,31 @@ class InventoryHoverHighlightOverlay extends Overlay
 			}
 
 			Panel panel = panelAt(panels, at);
-			if (panel == null || (smallestAt(panel.targets, at) != null && smallestAt(panel.empties, at) == null))
+			if (panel == null)
 			{
 				continue;
 			}
 
-			plugin.stats.add(ClickStats.Kind.MISSED);
+			SwitchPractice.Result practice = practiceClick(panel, at, click[2]);
+			if (practice == SwitchPractice.Result.HIT)
+			{
+				continue;
+			}
+			if (practice == SwitchPractice.Result.IGNORED)
+			{
+				boolean onEmpty = smallestAt(panel.empties, at) != null;
+				if (!onEmpty && (smallestAt(panel.targets, at) != null || smallestAt(panel.others, at) != null))
+				{
+					continue;
+				}
+				plugin.stats.add(ClickStats.Kind.MISSED);
+			}
+
 			if (config.deadClickMarker())
 			{
 				deadClicks.add(click);
 			}
-			if (config.missDots())
+			if (tabs.get(panel.tab).missDots)
 			{
 				missDots.add(new MissDot(panel.kind, at.getX() - panel.area.x, at.getY() - panel.area.y, click[2]));
 			}
@@ -767,19 +880,12 @@ class InventoryHoverHighlightOverlay extends Overlay
 	/** Small dots that stay at dead clicks, fading over the miss dot duration. */
 	private void drawMissDots(Graphics2D graphics, List<Panel> panels, long now)
 	{
-		if (!config.missDots())
-		{
-			missDots.clear();
-			return;
-		}
-
-		long duration = config.missDotDuration() * 1_000_000_000L;
-		Color color = config.missDotColor();
 		for (Iterator<MissDot> it = missDots.iterator(); it.hasNext(); )
 		{
 			MissDot dot = it.next();
+			TabSettings.Tab tab = tabOf(dot.kind);
 			long age = now - dot.time;
-			if (age >= duration)
+			if (!tab.missDots || age >= tab.missDotDuration * 1_000_000_000L)
 			{
 				it.remove();
 				continue;
@@ -791,11 +897,92 @@ class InventoryHoverHighlightOverlay extends Overlay
 			{
 				continue;
 			}
+			long duration = tab.missDotDuration * 1_000_000_000L;
 
 			double strength = 1 - (double) age / duration;
+			Color color = tab.missDotColor;
 			graphics.setColor(withAlpha(color, (int) (color.getAlpha() * strength)));
-			graphics.fill(new Ellipse2D.Double(panel.area.x + dot.dx - MISS_DOT_SIZE / 2.0,
-				panel.area.y + dot.dy - MISS_DOT_SIZE / 2.0, MISS_DOT_SIZE, MISS_DOT_SIZE));
+			drawDot(graphics, tab.missDotShape, panel.area.x + dot.dx, panel.area.y + dot.dy, tab.missDotSize,
+				tab.missDotHollow);
+		}
+	}
+
+	private static void drawDot(Graphics2D graphics, InventoryHoverHighlightConfig.MissDotShape shape,
+		double x, double y, int size, boolean hollow)
+	{
+		double h = size / 2.0;
+		graphics.setStroke(new BasicStroke(1.5f));
+		Path2D path = new Path2D.Double();
+		Shape dot;
+		switch (shape)
+		{
+			case RING:
+				graphics.draw(new Ellipse2D.Double(x - h, y - h, size, size));
+				return;
+			case CROSS:
+				graphics.draw(new Line2D.Double(x - h, y - h, x + h, y + h));
+				graphics.draw(new Line2D.Double(x - h, y + h, x + h, y - h));
+				return;
+			case PLUS:
+				graphics.draw(new Line2D.Double(x - h, y, x + h, y));
+				graphics.draw(new Line2D.Double(x, y - h, x, y + h));
+				return;
+			case SQUARE:
+				dot = new Rectangle2D.Double(x - h, y - h, size, size);
+				break;
+			case DIAMOND:
+				path.moveTo(x, y - h);
+				path.lineTo(x + h, y);
+				path.lineTo(x, y + h);
+				path.lineTo(x - h, y);
+				path.closePath();
+				dot = path;
+				break;
+			case TRIANGLE:
+				path.moveTo(x, y - h);
+				path.lineTo(x + h, y + h);
+				path.lineTo(x - h, y + h);
+				path.closePath();
+				dot = path;
+				break;
+			case HEART:
+				// Two lobes meeting at a dip on top, curving down to a point at the bottom
+				path.moveTo(x, y + h);
+				path.curveTo(x - h * 1.2, y + h * 0.2, x - h * 0.6, y - h * 1.0, x, y - h * 0.4);
+				path.curveTo(x + h * 0.6, y - h * 1.0, x + h * 1.2, y + h * 0.2, x, y + h);
+				path.closePath();
+				dot = path;
+				break;
+			default:
+				dot = new Ellipse2D.Double(x - h, y - h, size, size);
+				break;
+		}
+
+		if (hollow)
+		{
+			graphics.draw(dot);
+		}
+		else
+		{
+			graphics.fill(dot);
+		}
+	}
+
+	/** Tab settings of a panel kind; the general settings for none. */
+	private TabSettings.Tab tabOf(PanelKind kind)
+	{
+		if (kind == null)
+		{
+			return tabs.get(TabSettings.INVENTORY);
+		}
+		switch (kind)
+		{
+			case PRAYERS:
+				return tabs.get(TabSettings.PRAYERS);
+			case SPELLS:
+				return tabs.get(TabSettings.SPELLS);
+			default:
+				return tabs.get(TabSettings.INVENTORY);
 		}
 	}
 
@@ -822,8 +1009,6 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 		long duration = config.missOutlineDuration() * 1_000_000L;
 		Color color = config.missOutlineColor();
-		int width = config.outlineWidth() + 1;
-		graphics.setStroke(new BasicStroke(width));
 		for (Iterator<Mark> it = missOutlines.iterator(); it.hasNext(); )
 		{
 			Mark mark = it.next();
@@ -841,6 +1026,8 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 			double strength = 1 - (double) age / duration;
 			graphics.setColor(withAlpha(color, (int) (color.getAlpha() * strength)));
+			int width = tabOf(mark.kind).outlineWidth + 1;
+			graphics.setStroke(new BasicStroke(width));
 			graphics.draw(outlineShape(mark.bounds, width));
 		}
 	}
@@ -967,14 +1154,24 @@ class InventoryHoverHighlightOverlay extends Overlay
 				continue;
 			}
 
-			Area dead = new Area(panel.area);
-			for (Rectangle slot : panel.slots)
-			{
-				dead.subtract(new Area(config.roundedAreas() ? fillShape(slot) : slot));
-			}
 			graphics.setColor(color);
-			graphics.fill(dead);
+			graphics.fill(deadArea(panel));
 		}
+	}
+
+	/** The parts of a panel where a click does nothing. */
+	private Area deadArea(Panel panel)
+	{
+		Area dead = new Area(panel.area);
+		for (Rectangle slot : panel.slots)
+		{
+			dead.subtract(new Area(config.roundedAreas() ? fillShape(slot) : slot));
+		}
+		for (Rectangle other : panel.others)
+		{
+			dead.subtract(new Area(other));
+		}
+		return dead;
 	}
 
 	/** Dead area color of a panel, or null when its shading is off. */
@@ -993,24 +1190,372 @@ class InventoryHoverHighlightOverlay extends Overlay
 		}
 	}
 
-	/** Glow at the mouse that dims the hovered panel outward. */
-	private void drawSpotlight(Graphics2D graphics, Panel panel, Point mouse)
+	/** Glow at the mouse that dims the hovered panel, or every panel, outward. */
+	private void drawSpotlights(Graphics2D graphics, List<Panel> panels, Panel hovered, Point mouse)
 	{
-		if (!config.spotlight())
+		if (mouse == null || mouse.getX() < 0 || mouse.getY() < 0)
 		{
 			return;
 		}
 
-		Color glow = config.spotlightGlow();
-		Color dim = config.spotlightDim();
 		Paint original = graphics.getPaint();
-		graphics.setPaint(new RadialGradientPaint(
-			new Point2D.Float(mouse.getX(), mouse.getY()),
-			config.spotlightRadius(),
-			new float[]{0f, 0.3f, 1f},
-			new Color[]{glow, withAlpha(dim, 0), dim}));
-		graphics.fill(panel.area);
+		for (Panel panel : panels)
+		{
+			TabSettings.Tab tab = tabs.get(panel.tab);
+			if (!tab.spotlight || (panel != hovered && !tab.spotlightAlways))
+			{
+				continue;
+			}
+
+			graphics.setPaint(spotlightPaint(tab, mouse));
+			graphics.fill(tab.spotlightDeadOnly ? deadArea(panel) : panel.area);
+		}
 		graphics.setPaint(original);
+	}
+
+	/**
+	 * Glow at the mouse that turns clear at the glow size, then darkens to the
+	 * dim color at the radius. With falloff, the dim holds until the falloff
+	 * start, then the same gradient runs in reverse out to the falloff end,
+	 * ending in the falloff color.
+	 */
+	private RadialGradientPaint spotlightPaint(TabSettings.Tab tab, Point mouse)
+	{
+		float radius = tab.spotlightRadius;
+		float glowSize = tab.spotlightGlowSize / 100f;
+		Point2D center = new Point2D.Float(mouse.getX(), mouse.getY());
+		if (!tab.spotlightFalloff)
+		{
+			Color dim = tab.spotlightDim;
+			return gradient(center, radius,
+				new float[]{0f, glowSize, 1f},
+				new Color[]{glowSize > 0 ? tab.spotlightGlow : withAlpha(dim, 0), withAlpha(dim, 0), dim});
+		}
+
+		// Past the falloff start the same gradient runs in reverse, scaled to the falloff length:
+		// the dim fades to clear over the share it took to build up, then the falloff color fades
+		// in over the glow's share, mirroring the glow at the mouse
+		Color dim = tab.spotlightDim;
+		Color falloff = tab.spotlightFalloffColor;
+		float start = Math.max(radius, tab.spotlightFalloffDistance);
+		float end = Math.max(start + 1, tab.spotlightFalloffEnd);
+		float clear = start + (end - start) * (1 - glowSize);
+		return gradient(center, end,
+			new float[]{0f, glowSize * radius / end, radius / end, start / end, clear / end, clear / end, 1f},
+			new Color[]{glowSize > 0 ? tab.spotlightGlow : withAlpha(dim, 0), withAlpha(dim, 0), dim, dim,
+				withAlpha(dim, 0), withAlpha(falloff, 0), falloff});
+	}
+
+	/** A radial gradient whose stops are nudged apart, since they must keep increasing. */
+	private static RadialGradientPaint gradient(Point2D center, float radius, float[] stops, Color[] colors)
+	{
+		float[] fixed = stops.clone();
+		for (int i = 1; i < fixed.length; i++)
+		{
+			fixed[i] = Math.max(fixed[i], fixed[i - 1] + 0.001f);
+		}
+		// Squeeze back under 1 from the end if nudging pushed past it
+		fixed[fixed.length - 1] = 1f;
+		for (int i = fixed.length - 2; i >= 0; i--)
+		{
+			fixed[i] = Math.min(fixed[i], fixed[i + 1] - 0.001f);
+		}
+		fixed[0] = 0f;
+		return new RadialGradientPaint(center, radius, fixed, colors);
+	}
+
+	/** Colors the background of every slot with the tab's slot background, icons kept on top. */
+	private void drawSlotBackgrounds(Graphics2D graphics, List<Panel> panels)
+	{
+		for (Panel panel : panels)
+		{
+			Color color = tabs.get(panel.tab).slotBackground;
+			if (color == null)
+			{
+				continue;
+			}
+
+			graphics.setColor(color);
+			for (Rectangle slot : panel.slots)
+			{
+				graphics.fill(fillShape(slot));
+			}
+			for (Rectangle slot : panel.slots)
+			{
+				drawIcon(graphics, panel, slot);
+			}
+		}
+	}
+
+	/** Draws the icon of the item, prayer or spell in an area again, over anything drawn on it. */
+	private void drawIcon(Graphics2D graphics, Panel panel, Rectangle bounds)
+	{
+		Widget widget = panel.widgets.get(bounds);
+		if (widget == null)
+		{
+			return;
+		}
+
+		if (panel.kind == PanelKind.INVENTORY || panel.kind == PanelKind.BANK)
+		{
+			int id = widget.getItemId();
+			int quantity = widget.getItemQuantity();
+			if (plugin.isFaded(widget) || id <= 0 || id == EMPTY_SLOT_ITEM || quantity <= 0)
+			{
+				return;
+			}
+			boolean stackable = quantity > 1 || itemManager.getItemComposition(id).isStackable();
+			BufferedImage image = itemManager.getImage(id, quantity, stackable);
+			if (image != null)
+			{
+				graphics.drawImage(image, bounds.x, bounds.y, null);
+			}
+			return;
+		}
+		drawSprites(graphics, widget);
+	}
+
+	/** Draws the sprites of a widget and its visible children at their places. */
+	private void drawSprites(Graphics2D graphics, Widget widget)
+	{
+		if (widget == null || widget.isSelfHidden())
+		{
+			return;
+		}
+
+		Rectangle bounds = widget.getBounds();
+		if (widget.getSpriteId() >= 0 && bounds != null && bounds.width > 0 && bounds.height > 0)
+		{
+			BufferedImage sprite = spriteManager.getSprite(widget.getSpriteId(), 0);
+			if (sprite != null)
+			{
+				graphics.drawImage(sprite, bounds.x, bounds.y, bounds.width, bounds.height, null);
+			}
+		}
+
+		for (Widget[] children : new Widget[][]{
+			widget.getStaticChildren(), widget.getDynamicChildren(), widget.getNestedChildren()})
+		{
+			if (children != null)
+			{
+				for (Widget child : children)
+				{
+					drawSprites(graphics, child);
+				}
+			}
+		}
+	}
+
+	// Switch practice
+
+	/** Starts practice rounds on the inventory's empty slots. */
+	private void updatePractice(List<Panel> panels, long now)
+	{
+		SwitchPractice practice = plugin.practice;
+		Panel inventory = panelOf(panels, PanelKind.INVENTORY);
+		if (!practice.isActive() || inventory == null)
+		{
+			return;
+		}
+
+		List<Integer> empty = new ArrayList<>();
+		for (int i = 0; i < inventory.slots.size(); i++)
+		{
+			if (inventory.empties.contains(inventory.slots.get(i)))
+			{
+				empty.add(i);
+			}
+		}
+		practice.roundDelay = config.practiceRoundDelay() * 1_000_000L;
+		practice.extraDelay = config.practiceRandomDelay() ? practice.roundDelay : 0;
+		practice.timeLimit = (long) (config.practiceTimeLimitSeconds() * 1_000_000_000L);
+		practice.ordered = config.practiceOrdered();
+		practice.roundsPerSession = config.practiceRounds();
+
+		int rounds = practice.roundCount();
+		practice.update(empty, config.practiceTargets(), now, client.getTickCount());
+		if (practice.roundCount() != rounds)
+		{
+			plugin.practiceRoundDone();
+		}
+		if (practice.isComplete())
+		{
+			plugin.practiceSessionDone();
+		}
+	}
+
+	/** Scores a click for switch practice; IGNORED when it is not a practice click. */
+	private SwitchPractice.Result practiceClick(Panel panel, Point at, long time)
+	{
+		SwitchPractice practice = plugin.practice;
+		if (panel.kind != PanelKind.INVENTORY || !practice.isActive())
+		{
+			return SwitchPractice.Result.IGNORED;
+		}
+
+		int slot = -1;
+		for (int i = 0; i < panel.slots.size(); i++)
+		{
+			if (panel.slots.get(i).contains(at.getX(), at.getY()))
+			{
+				slot = i;
+				break;
+			}
+		}
+
+		int rounds = practice.roundCount();
+		SwitchPractice.Result result = practice.click(slot, time, client.getTickCount());
+		if (result == SwitchPractice.Result.HIT)
+		{
+			practiceHits.add(new Mark(panel.slots.get(slot), false, time, PanelKind.INVENTORY));
+		}
+		if (practice.roundCount() != rounds)
+		{
+			plugin.practiceRoundDone();
+			if (practice.isComplete())
+			{
+				plugin.practiceSessionDone();
+			}
+		}
+		return result;
+	}
+
+	/** Practice targets, glowing hits and the status line above the inventory. */
+	private void drawPractice(Graphics2D graphics, List<Panel> panels, long now)
+	{
+		SwitchPractice practice = plugin.practice;
+		Panel inventory = panelOf(panels, PanelKind.INVENTORY);
+		if (!practice.isActive())
+		{
+			practiceHits.clear();
+			return;
+		}
+		if (inventory == null)
+		{
+			return;
+		}
+
+		int width = tabs.get(TabSettings.INVENTORY).outlineWidth;
+		boolean numbers = config.practiceNumbers() || config.practiceOrdered();
+		int next = practice.nextTarget();
+		int number = 0;
+		graphics.setFont(FontManager.getRunescapeBoldFont());
+		for (Map.Entry<Integer, Boolean> target : practice.targets().entrySet())
+		{
+			number++;
+			if (target.getKey() >= inventory.slots.size())
+			{
+				continue;
+			}
+			Rectangle bounds = inventory.slots.get(target.getKey());
+			Color color = target.getValue() ? config.practiceHitColor() : config.practiceTargetColor();
+			graphics.setColor(color);
+			graphics.fill(fillShape(bounds));
+			// In order mode the next target gets a thicker outline
+			int stroke = config.practiceOrdered() && target.getKey() == next ? width + 1 : width;
+			graphics.setStroke(new BasicStroke(stroke));
+			graphics.setColor(withAlpha(color, 255));
+			graphics.draw(outlineShape(bounds, stroke));
+
+			if (numbers)
+			{
+				String label = String.valueOf(number);
+				int textWidth = graphics.getFontMetrics().stringWidth(label);
+				int x = (int) bounds.getCenterX() - textWidth / 2;
+				int y = (int) bounds.getCenterY() + graphics.getFontMetrics().getAscent() / 2 - 1;
+				graphics.setColor(Color.BLACK);
+				graphics.drawString(label, x + 1, y + 1);
+				graphics.setColor(Color.WHITE);
+				graphics.drawString(label, x, y);
+			}
+		}
+
+		if (config.practiceTimerBar() && practice.timeLimit > 0 && !practice.targets().isEmpty())
+		{
+			double left = practice.timeLeft(now);
+			Rectangle area = inventory.area;
+			graphics.setColor(new Color(0, 0, 0, 120));
+			graphics.fillRect(area.x, area.y, area.width, 4);
+			// Green when the round starts, red as time runs out
+			graphics.setColor(Color.getHSBColor((float) (left / 3), 0.9f, 1f));
+			graphics.fillRect(area.x, area.y, (int) Math.round(area.width * left), 4);
+		}
+
+		Color hit = config.practiceHitColor();
+		for (Iterator<Mark> it = practiceHits.iterator(); it.hasNext(); )
+		{
+			Mark mark = it.next();
+			long age = now - mark.time;
+			if (age >= PRACTICE_HIT_NANOS)
+			{
+				it.remove();
+				continue;
+			}
+			double strength = 1 - (double) age / PRACTICE_HIT_NANOS;
+			graphics.setColor(withAlpha(hit, (int) (hit.getAlpha() * strength)));
+			graphics.fill(fillShape(mark.bounds));
+		}
+
+		InventoryHoverHighlightConfig.PracticeStats mode = config.practiceStatsMode();
+		if (mode != InventoryHoverHighlightConfig.PracticeStats.OFF)
+		{
+			drawPracticeStatus(graphics, inventory, practice, mode);
+		}
+	}
+
+	/** Stats lines stacked upward from the top of the inventory. */
+	private static void drawPracticeStatus(Graphics2D graphics, Panel inventory, SwitchPractice practice,
+		InventoryHoverHighlightConfig.PracticeStats mode)
+	{
+		List<String> lines = new ArrayList<>();
+		boolean showLast = mode != InventoryHoverHighlightConfig.PracticeStats.SESSION;
+		boolean showSession = mode != InventoryHoverHighlightConfig.PracticeStats.LAST_ROUND;
+		SwitchPractice.Summary session = practice.summary();
+
+		if (inventory.empties.isEmpty())
+		{
+			lines.add("Practice: empty some inventory slots");
+		}
+		else if (practice.lastRound == null)
+		{
+			lines.add("Practice: click the lit slots");
+		}
+		else
+		{
+			if (showSession && session != null)
+			{
+				String rounds = practice.roundsPerSession > 0
+					? session.rounds + "/" + practice.roundsPerSession
+					: String.valueOf(session.rounds);
+				lines.add(String.format("Rounds %s, 1-tick %.0f%%, accuracy %.0f%%, timeouts %d",
+					rounds, session.oneTickRate, session.accuracy, session.timeouts));
+				lines.add(String.format("Avg %.0f ms (best %d), %.1f ticks, react %.0f ms",
+					session.switchMillis, session.bestSwitchMillis, session.ticks, session.reactMillis));
+			}
+			if (showLast)
+			{
+				SwitchPractice.Round last = practice.lastRound;
+				lines.add(last.timedOut
+					? String.format("Last: timed out, %d hit, %d miss%s", last.hits, last.misses,
+						last.misses == 1 ? "" : "es")
+					: String.format("Last: %d ms, %d tick%s, %d miss%s", last.switchMillis, last.ticks,
+						last.ticks == 1 ? "" : "s", last.misses, last.misses == 1 ? "" : "es"));
+			}
+		}
+
+		Font font = FontManager.getRunescapeSmallFont();
+		graphics.setFont(font);
+		int lineHeight = graphics.getFontMetrics().getHeight();
+		int x = inventory.area.x + 2;
+		int y = inventory.area.y - 3 - lineHeight * (lines.size() - 1);
+		for (String line : lines)
+		{
+			graphics.setColor(Color.BLACK);
+			graphics.drawString(line, x + 1, y + 1);
+			graphics.setColor(Color.WHITE);
+			graphics.drawString(line, x, y);
+			y += lineHeight;
+		}
 	}
 
 	/** Backfill and icon outline for items the plugin made transparent. */
@@ -1059,7 +1604,6 @@ class InventoryHoverHighlightOverlay extends Overlay
 		}
 
 		Color color = config.cooldownColor();
-		long total = (long) InventoryHoverHighlightPlugin.CONSUME_DELAY_TICKS * InventoryHoverHighlightPlugin.TICK_NANOS;
 		for (Panel panel : panels)
 		{
 			if (panel.kind != PanelKind.INVENTORY)
@@ -1076,6 +1620,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 					continue;
 				}
 
+				long total = (long) plugin.consumeLength(kind) * InventoryHoverHighlightPlugin.TICK_NANOS;
 				long remaining = ticks * (long) InventoryHoverHighlightPlugin.TICK_NANOS - (now - plugin.lastTickNanos);
 				double fraction = Math.max(0, Math.min(1, (double) remaining / total));
 				Rectangle b = slot.bounds;
@@ -1144,7 +1689,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 			return;
 		}
 
-		int width = config.outlineWidth();
+		int width = tabs.get(TabSettings.PRAYERS).outlineWidth;
 		for (int i = 0; i < InventoryHoverHighlightPlugin.PRAYER_COUNT; i++)
 		{
 			Widget widget = client.getWidget(InterfaceID.Prayerbook.PRAYER1 + i);
@@ -1209,7 +1754,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 		}
 
 		Rectangle bounds = spell.getBounds();
-		int width = config.outlineWidth();
+		int width = tabs.get(TabSettings.SPELLS).outlineWidth;
 		graphics.setColor(config.activePrayerFill());
 		graphics.fill(fillShape(bounds));
 		graphics.setStroke(new BasicStroke(width));
@@ -1237,7 +1782,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 			return;
 		}
 
-		int width = config.outlineWidth();
+		int width = tabs.get(TabSettings.SPELLS).outlineWidth;
 		graphics.setColor(config.autocastColor());
 		graphics.setStroke(new BasicStroke(width));
 		graphics.draw(outlineShape(bounds, width));
@@ -1245,14 +1790,37 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 	private Shape fillShape(Rectangle b)
 	{
-		int arc = config.cornerRadius() * 2;
+		return fillShape(b, shapeTab(b).cornerRadius);
+	}
+
+	/** Settings of the tab whose panel holds an area, for its corner radius; the inventory's when none. */
+	private TabSettings.Tab shapeTab(Rectangle b)
+	{
+		for (Panel panel : framePanels)
+		{
+			if (panel.area.contains(b.getCenterX(), b.getCenterY()))
+			{
+				return tabs.get(panel.tab);
+			}
+		}
+		return tabs.get(TabSettings.INVENTORY);
+	}
+
+	private static Shape fillShape(Rectangle b, int radius)
+	{
+		int arc = radius * 2;
 		return new RoundRectangle2D.Float(b.x, b.y, b.width, b.height, arc, arc);
 	}
 
 	private Shape outlineShape(Rectangle b, int width)
 	{
+		return outlineShape(b, width, shapeTab(b).cornerRadius);
+	}
+
+	private static Shape outlineShape(Rectangle b, int width, int radius)
+	{
 		// Inset by half the stroke so the outline stays inside the clickable area
-		int arc = config.cornerRadius() * 2;
+		int arc = radius * 2;
 		float inset = width / 2f;
 		return new RoundRectangle2D.Float(b.x + inset, b.y + inset, b.width - width, b.height - width, arc, arc);
 	}

@@ -1,11 +1,13 @@
 package com.inventoryhover;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 import javax.inject.Inject;
 import net.runelite.client.ui.FontManager;
@@ -16,16 +18,17 @@ import net.runelite.client.ui.overlay.OverlayPriority;
 import net.runelite.client.ui.overlay.components.ComponentConstants;
 
 /**
- * Floating chart of recent clicks: a clean click rate at the top, one stacked
- * bar per few seconds (good, missed, refused, double), and a legend with the
- * counts for the window. Movable like any RuneLite overlay box.
+ * Floating chart of recent clicks: a clean click rate at the top, stacked bars
+ * over the chosen time window (good, missed, refused, double), and a legend
+ * with the counts for the window. Size, window and parts are configurable, and
+ * text shortens to fit narrow charts. Movable like any RuneLite overlay box.
  */
 class ClickChartOverlay extends Overlay
 {
-	private static final int WIDTH = 190;
 	private static final int PAD = 6;
-	private static final int CHART_HEIGHT = 50;
 	private static final int BAR_GAP = 1;
+	// Space kept between the title and the clean click rate
+	private static final int TITLE_GAP = 8;
 
 	private static final Color GOOD = new Color(80, 200, 120);
 	private static final Color MISSED = new Color(230, 70, 70);
@@ -33,6 +36,7 @@ class ClickChartOverlay extends Overlay
 	private static final Color DOUBLE = new Color(240, 130, 40);
 	private static final Color AXIS = new Color(255, 255, 255, 60);
 	private static final Color LABEL = new Color(200, 200, 200);
+	private static final Color AVERAGE = new Color(255, 255, 255, 200);
 
 	// Draw order from the baseline up; misses sit on top so they stand out
 	private static final Color[] STACK = {GOOD, DOUBLE, REFUSED, MISSED};
@@ -60,7 +64,12 @@ class ClickChartOverlay extends Overlay
 		}
 
 		graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		int[][] history = plugin.stats.history();
+		boolean ticks = config.clickChartUnit() == InventoryHoverHighlightConfig.ChartUnit.TICKS;
+		int interval = config.clickChartInterval();
+		int barCount = config.clickChartBars();
+		int[][] history = ticks
+			? plugin.stats.tickHistory(interval, barCount)
+			: plugin.stats.secondHistory(interval, barCount);
 
 		// Per bar: good, double, refused, missed. Good excludes the clicks that went wrong.
 		int[][] bars = new int[history.length][4];
@@ -84,41 +93,69 @@ class ClickChartOverlay extends Overlay
 
 		Font small = FontManager.getRunescapeSmallFont();
 		Font bold = FontManager.getRunescapeBoldFont();
-		graphics.setFont(small);
 		FontMetrics smallMetrics = graphics.getFontMetrics(small);
 		FontMetrics boldMetrics = graphics.getFontMetrics(bold);
 		int lineHeight = smallMetrics.getHeight();
+		int width = config.clickChartWidth();
+		int inner = width - PAD * 2;
+		int chartHeight = config.clickChartHeight();
+
+		int all = totals[0] + totals[1] + totals[2] + totals[3];
+		String rate = all == 0 ? "-" : (totals[0] * 100 / all) + "%" + (inner >= 140 ? " clean" : "");
+		String window = ticks ? interval * barCount + "t" : formatWindow(interval * barCount);
+		// Shorten the title until it fits beside the rate, or drop it
+		String title = null;
+		for (String option : new String[]{"Clicks, last " + window, "Clicks " + window, window})
+		{
+			if (boldMetrics.stringWidth(option) + TITLE_GAP + boldMetrics.stringWidth(rate) <= inner)
+			{
+				title = option;
+				break;
+			}
+		}
+
+		boolean legend = config.clickChartLegend();
+		boolean axis = config.clickChartTimeAxis();
+		// Two legend columns when they fit, else one
+		int legendColumns = 2;
+		for (int k = 0; k < 4; k++)
+		{
+			if (11 + smallMetrics.stringWidth(NAMES[k] + " " + totals[k]) > inner / 2)
+			{
+				legendColumns = 1;
+			}
+		}
+		int legendRows = 4 / legendColumns;
 
 		int titleHeight = boldMetrics.getHeight();
-		int legendHeight = lineHeight * 2;
-		int height = PAD + titleHeight + 4 + CHART_HEIGHT + lineHeight + 4 + legendHeight + PAD;
+		int height = PAD + titleHeight + 4 + chartHeight
+			+ (axis ? lineHeight + 2 : 2)
+			+ (legend ? lineHeight * legendRows + 2 : 0) + PAD;
 
 		graphics.setColor(ComponentConstants.STANDARD_BACKGROUND_COLOR);
-		graphics.fill(new RoundRectangle2D.Float(0, 0, WIDTH, height, 8, 8));
+		graphics.fill(new RoundRectangle2D.Float(0, 0, width, height, 8, 8));
 
 		// Title and clean click rate
 		int y = PAD + boldMetrics.getAscent();
 		graphics.setFont(bold);
-		graphics.setColor(Color.WHITE);
-		long seconds = ClickStats.BUCKET_MILLIS * ClickStats.BUCKETS / 1000;
-		graphics.drawString("Clicks, last " + seconds + "s", PAD, y);
-
-		int all = totals[0] + totals[1] + totals[2] + totals[3];
-		String rate = all == 0 ? "-" : (totals[0] * 100 / all) + "% clean";
+		if (title != null)
+		{
+			graphics.setColor(Color.WHITE);
+			graphics.drawString(title, PAD, y);
+		}
 		graphics.setColor(all == 0 ? LABEL : rateColor(totals[0] * 100 / all));
-		graphics.drawString(rate, WIDTH - PAD - boldMetrics.stringWidth(rate), y);
+		graphics.drawString(rate, width - PAD - boldMetrics.stringWidth(rate), y);
 
 		// Bars
 		int chartTop = PAD + titleHeight + 4;
-		int chartBottom = chartTop + CHART_HEIGHT;
+		int chartBottom = chartTop + chartHeight;
 		int max = 1;
 		for (int[] bar : bars)
 		{
 			max = Math.max(max, bar[0] + bar[1] + bar[2] + bar[3]);
 		}
 
-		int chartWidth = WIDTH - PAD * 2;
-		float slot = (float) chartWidth / bars.length;
+		float slot = (float) inner / bars.length;
 		for (int i = 0; i < bars.length; i++)
 		{
 			int x = PAD + Math.round(i * slot);
@@ -126,7 +163,7 @@ class ClickChartOverlay extends Overlay
 			int top = chartBottom;
 			for (int k = 0; k < 4; k++)
 			{
-				int h = Math.round((float) bars[i][k] / max * CHART_HEIGHT);
+				int h = Math.round((float) bars[i][k] / max * chartHeight);
 				if (h <= 0)
 				{
 					continue;
@@ -137,39 +174,90 @@ class ClickChartOverlay extends Overlay
 			}
 		}
 
+		if (config.clickChartAverage())
+		{
+			drawAverage(graphics, bars, max, slot, chartBottom, chartHeight, config.clickChartAverageBars());
+		}
+
 		graphics.setColor(AXIS);
-		graphics.drawLine(PAD, chartBottom, WIDTH - PAD, chartBottom);
+		graphics.drawLine(PAD, chartBottom, width - PAD, chartBottom);
 
 		graphics.setFont(small);
 		if (all == 0)
 		{
 			String empty = "No clicks yet";
 			graphics.setColor(LABEL);
-			graphics.drawString(empty, (WIDTH - smallMetrics.stringWidth(empty)) / 2,
-				chartTop + CHART_HEIGHT / 2 + smallMetrics.getAscent() / 2);
+			graphics.drawString(empty, Math.max(PAD, (width - smallMetrics.stringWidth(empty)) / 2),
+				chartTop + chartHeight / 2 + smallMetrics.getAscent() / 2);
 		}
 
-		// Time axis
-		y = chartBottom + smallMetrics.getAscent() + 1;
-		graphics.setColor(LABEL);
-		graphics.drawString(seconds + "s ago", PAD, y);
-		String now = "now";
-		graphics.drawString(now, WIDTH - PAD - smallMetrics.stringWidth(now), y);
-
-		// Legend: two columns, colored square and count
-		int legendTop = chartBottom + lineHeight + 4;
-		int column = (WIDTH - PAD * 2) / 2;
-		for (int k = 0; k < 4; k++)
+		int below = chartBottom + 2;
+		if (axis)
 		{
-			int x = PAD + (k % 2) * column;
-			int rowY = legendTop + (k / 2) * lineHeight;
-			graphics.setColor(STACK[k]);
-			graphics.fillRect(x, rowY + 2, 7, 7);
-			graphics.setColor(Color.WHITE);
-			graphics.drawString(NAMES[k] + " " + totals[k], x + 11, rowY + smallMetrics.getAscent());
+			y = chartBottom + smallMetrics.getAscent() + 1;
+			graphics.setColor(LABEL);
+			graphics.drawString(window + " ago", PAD, y);
+			String now = "now";
+			graphics.drawString(now, width - PAD - smallMetrics.stringWidth(now), y);
+			below = chartBottom + lineHeight + 2;
 		}
 
-		return new Dimension(WIDTH, height);
+		if (legend)
+		{
+			int column = inner / legendColumns;
+			for (int k = 0; k < 4; k++)
+			{
+				int x = PAD + (k % legendColumns) * column;
+				int rowY = below + (k / legendColumns) * lineHeight;
+				graphics.setColor(STACK[k]);
+				graphics.fillRect(x, rowY + 2, 7, 7);
+				graphics.setColor(Color.WHITE);
+				graphics.drawString(NAMES[k] + " " + totals[k], x + 11, rowY + smallMetrics.getAscent());
+			}
+		}
+
+		return new Dimension(width, height);
+	}
+
+	/** Line through the average of the last {@code span} bar totals, at each bar's center. */
+	private static void drawAverage(Graphics2D graphics, int[][] bars, int max, float slot, int chartBottom,
+		int chartHeight, int span)
+	{
+		Path2D line = new Path2D.Float();
+		double sum = 0;
+		for (int i = 0; i < bars.length; i++)
+		{
+			sum += bars[i][0] + bars[i][1] + bars[i][2] + bars[i][3];
+			if (i >= span)
+			{
+				int[] old = bars[i - span];
+				sum -= old[0] + old[1] + old[2] + old[3];
+			}
+			double average = sum / Math.min(i + 1, span);
+			float x = PAD + (i + 0.5f) * slot;
+			float y = (float) (chartBottom - average / max * chartHeight);
+			if (i == 0)
+			{
+				line.moveTo(x, y);
+			}
+			else
+			{
+				line.lineTo(x, y);
+			}
+		}
+		graphics.setStroke(new BasicStroke(1.5f));
+		graphics.setColor(AVERAGE);
+		graphics.draw(line);
+	}
+
+	/** A window length like 45s, 2m or 2m30s. */
+	private static String formatWindow(int seconds)
+	{
+		if (seconds < 120)
+		{
+			return seconds + "s";
+		}
+		return (seconds / 60) + "m" + (seconds % 60 == 0 ? "" : (seconds % 60) + "s");
 	}
 
 	private static Color rateColor(int percent)
