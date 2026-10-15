@@ -242,7 +242,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "roundedAreas",
-		name = "Force clickable area to highlight radius",
+		name = "Round grid and dead areas to highlight radius",
 		description = "Round the clickable grid and the dead area shading with the hover highlight's corner radius."
 			+ "<br>Note: the game's clickable areas are square, so slot corners can look dead even though"
 			+ " clicks there still work",

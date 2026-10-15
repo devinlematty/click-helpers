@@ -27,7 +27,7 @@ Settings are grouped in the same sections as the plugin's config panel.
 - **Style**: outline, fill, or both
 - **Outline / fill color** (with alpha)
 - **Corner radius**: 0 (square) to 10 px
-- **Force clickable area to highlight radius**: rounds the grid and dead area shading with the
+- **Round grid and dead areas to highlight radius**: rounds the grid and dead area shading with the
   hover highlight's corner radius (on by default). The game's clickable areas are
   square, so slot corners can look dead even though clicks there still work
 - **Outline width**: 1-4 px
