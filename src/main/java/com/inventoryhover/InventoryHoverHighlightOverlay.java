@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import net.runelite.api.Client;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
@@ -52,6 +53,8 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.util.Text;
 import net.runelite.client.util.WildcardMatcher;
 
+// One shared instance: the practice status overlay reads its practice lines
+@Singleton
 class InventoryHoverHighlightOverlay extends Overlay
 {
 	// Placeholder item the game puts in empty slots of some item containers
