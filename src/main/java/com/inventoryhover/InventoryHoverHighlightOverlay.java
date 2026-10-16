@@ -2379,14 +2379,20 @@ class InventoryHoverHighlightOverlay extends Overlay
 		}
 
 		InventoryHoverHighlightConfig.PracticeStats mode = config.practiceStatsMode();
-		if (mode != InventoryHoverHighlightConfig.PracticeStats.OFF)
-		{
-			drawPracticeStatus(graphics, inventory, practice, mode);
-		}
+		practiceLines = mode == InventoryHoverHighlightConfig.PracticeStats.OFF
+			? new ArrayList<>() : practiceStatus(inventory, practice, mode);
 	}
 
-	/** Stats lines stacked upward from the top of the inventory. */
-	private static void drawPracticeStatus(Graphics2D graphics, Panel inventory, SwitchPractice practice,
+	/** The practice status for the movable practice overlay; empty when there is nothing to show. */
+	private List<String> practiceLines = new ArrayList<>();
+
+	List<String> practiceLines()
+	{
+		return plugin.practice.isActive() ? practiceLines : new ArrayList<>();
+	}
+
+	/** The practice status and stats, one line each. */
+	private static List<String> practiceStatus(Panel inventory, SwitchPractice practice,
 		InventoryHoverHighlightConfig.PracticeStats mode)
 	{
 		List<String> lines = new ArrayList<>();
@@ -2425,19 +2431,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 			}
 		}
 
-		Font font = FontManager.getRunescapeSmallFont();
-		graphics.setFont(font);
-		int lineHeight = graphics.getFontMetrics().getHeight();
-		int x = inventory.area.x + 2;
-		int y = inventory.area.y - 3 - lineHeight * (lines.size() - 1);
-		for (String line : lines)
-		{
-			graphics.setColor(Color.BLACK);
-			graphics.drawString(line, x + 1, y + 1);
-			graphics.setColor(Color.WHITE);
-			graphics.drawString(line, x, y);
-			y += lineHeight;
-		}
+		return lines;
 	}
 
 	/** Backfill and icon outline for items the plugin made transparent. */

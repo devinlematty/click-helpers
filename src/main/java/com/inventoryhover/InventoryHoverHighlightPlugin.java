@@ -230,6 +230,9 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	private CommunityLoadouts communityLoadouts;
 
 	@Inject
+	private PracticeStatusOverlay practiceStatusOverlay;
+
+	@Inject
 	private TabSettings tabSettings;
 
 	@Inject
@@ -321,6 +324,7 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	{
 		overlayManager.add(overlay);
 		overlay.fillOverlays().forEach(overlayManager::add);
+		overlayManager.add(practiceStatusOverlay);
 		mouseManager.registerMouseListener(mouseListener);
 		keyManager.registerKeyListener(hideItemsHotkey);
 		lastTickNanos = System.nanoTime();
@@ -360,6 +364,7 @@ public class InventoryHoverHighlightPlugin extends Plugin
 		});
 		overlayManager.remove(overlay);
 		overlay.fillOverlays().forEach(overlayManager::remove);
+		overlayManager.remove(practiceStatusOverlay);
 		mouseManager.unregisterMouseListener(mouseListener);
 		keyManager.unregisterKeyListener(hideItemsHotkey);
 		overlayManager.remove(chartOverlay);

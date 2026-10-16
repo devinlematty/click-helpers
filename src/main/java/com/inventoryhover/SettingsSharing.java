@@ -285,7 +285,9 @@ class SettingsSharing
 		for (ConfigItemDescriptor item : configManager.getConfigDescriptor(config).getItems())
 		{
 			// Practice settings are kept as they are; the side panel's practice tab sets them
-			if (SKIPPED_KEYS.contains(item.key()) || item.key().equals("syncTabSettings") || item.key().startsWith("practice")
+			// Off with empty inventory would look like the plugin broke, so it is left as it is
+			if (SKIPPED_KEYS.contains(item.key()) || item.key().equals("syncTabSettings") || item.key().equals("hideWhenEmpty")
+				|| item.key().startsWith("practice")
 				|| NOT_RANDOMIZED_SECTIONS.contains(item.getItem().section()))
 			{
 				continue;
