@@ -23,7 +23,6 @@ import javax.inject.Singleton;
 import net.runelite.client.config.ConfigDescriptor;
 import net.runelite.client.config.ConfigItemDescriptor;
 import net.runelite.client.config.ConfigManager;
-import net.runelite.client.config.ConfigSectionDescriptor;
 
 /**
  * Copies the plugin's settings to the clipboard as readable JSON, grouped by
@@ -60,16 +59,12 @@ class SettingsSharing
 	private Set<String> tabKeys;
 	private final Gson gson;
 
-	private final ConfigPanelBridge panelBridge;
-
 	@Inject
-	SettingsSharing(InventoryHoverHighlightConfig config, ConfigManager configManager, Gson gson,
-		ConfigPanelBridge panelBridge)
+	SettingsSharing(InventoryHoverHighlightConfig config, ConfigManager configManager, Gson gson)
 	{
 		this.config = config;
 		this.configManager = configManager;
 		this.gson = gson;
-		this.panelBridge = panelBridge;
 	}
 
 	/** Copies the settings to the clipboard; returns a message for the player. */
@@ -119,13 +114,11 @@ class SettingsSharing
 		ConfigDescriptor descriptor = configManager.getConfigDescriptor(config);
 		Map<String, String> sectionNames = new HashMap<>();
 		JsonObject settings = new JsonObject();
-		descriptor.getSections().stream()
-			.sorted(Comparator.comparingInt(ConfigSectionDescriptor::position))
-			.forEach(section ->
-			{
-				sectionNames.put(section.key(), section.name());
-				settings.add(section.name(), new JsonObject());
-			});
+		for (SettingsSections.Section section : SettingsSections.ALL)
+		{
+			sectionNames.put(section.key, section.name);
+			settings.add(section.name, new JsonObject());
+		}
 
 		descriptor.getItems().stream()
 			.sorted(Comparator.comparingInt(ConfigItemDescriptor::position))
@@ -180,7 +173,13 @@ class SettingsSharing
 			configManager.setDefaultConfiguration(config, false);
 			defaultsStored = true;
 		}
-		return configManager.getConfiguration(InventoryHoverHighlightConfig.GROUP, item.key());
+		String value = configManager.getConfiguration(InventoryHoverHighlightConfig.GROUP, item.key());
+		if (value == null)
+		{
+			// Reset since the defaults were stored, so store them again
+			configManager.setDefaultConfiguration(config, false);
+		}
+		return value != null ? value : configManager.getConfiguration(InventoryHoverHighlightConfig.GROUP, item.key());
 	}
 
 
@@ -198,7 +197,6 @@ class SettingsSharing
 		}
 
 		String suffix = key.substring(prefix.length());
-		List<String> changed = new ArrayList<>();
 		for (String other : TAB_PREFIXES)
 		{
 			String target = other + suffix;
@@ -215,12 +213,6 @@ class SettingsSharing
 			{
 				configManager.setConfiguration(InventoryHoverHighlightConfig.GROUP, target, value);
 			}
-			changed.add(target);
-		}
-		// RuneLite's panel does not redraw for changes made behind it
-		if (!changed.isEmpty())
-		{
-			panelBridge.refresh(changed);
 		}
 	}
 
@@ -292,7 +284,8 @@ class SettingsSharing
 		int changed = 0;
 		for (ConfigItemDescriptor item : configManager.getConfigDescriptor(config).getItems())
 		{
-			if (SKIPPED_KEYS.contains(item.key()) || item.key().equals("syncTabSettings") || item.getItem().hidden()
+			// Practice settings are kept as they are; the side panel's practice tab sets them
+			if (SKIPPED_KEYS.contains(item.key()) || item.key().equals("syncTabSettings") || item.key().startsWith("practice")
 				|| NOT_RANDOMIZED_SECTIONS.contains(item.getItem().section()))
 			{
 				continue;

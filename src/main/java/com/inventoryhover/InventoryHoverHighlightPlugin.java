@@ -230,9 +230,6 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	private CommunityLoadouts communityLoadouts;
 
 	@Inject
-	private ConfigPanelBridge configPanelBridge;
-
-	@Inject
 	private TabSettings tabSettings;
 
 	@Inject
@@ -324,7 +321,6 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	{
 		overlayManager.add(overlay);
 		overlay.fillOverlays().forEach(overlayManager::add);
-		configPanelBridge.start();
 		mouseManager.registerMouseListener(mouseListener);
 		keyManager.registerKeyListener(hideItemsHotkey);
 		lastTickNanos = System.nanoTime();
@@ -364,7 +360,6 @@ public class InventoryHoverHighlightPlugin extends Plugin
 		});
 		overlayManager.remove(overlay);
 		overlay.fillOverlays().forEach(overlayManager::remove);
-		configPanelBridge.stop();
 		mouseManager.unregisterMouseListener(mouseListener);
 		keyManager.unregisterKeyListener(hideItemsHotkey);
 		overlayManager.remove(chartOverlay);
@@ -416,6 +411,10 @@ public class InventoryHoverHighlightPlugin extends Plugin
 		}
 
 		tabSettings.invalidate();
+		if (panel != null)
+		{
+			panel.settingChanged(event.getKey());
+		}
 		switch (event.getKey())
 		{
 			case "activePrayers":

@@ -24,8 +24,12 @@ hiding only changes how icons are drawn; hidden items still work when clicked.
 
 ## Settings
 
-Settings are grouped in the same sections as the plugin's config panel. Hover,
-spotlight and miss dot settings are set per tab; see
+All settings are in the **Settings** tab of the Click Helpers side panel, in
+collapsible sections with a search box that filters them as you type, and
+Expand all / Collapse all buttons. Right-click a setting to reset it. RuneLite's
+own config panel only holds import/export, the side panel toggle and the
+community loadouts switch. Hover, spotlight and miss dot settings are set per
+tab; see
 [Inventory, prayer and spellbook tabs](#inventory-prayer-and-spellbook-tabs).
 
 ### Areas

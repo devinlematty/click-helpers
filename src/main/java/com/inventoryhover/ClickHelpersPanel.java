@@ -58,6 +58,7 @@ class ClickHelpersPanel extends PluginPanel
 	private final JLabel loadoutStatus = new JLabel(" ");
 	private final JLabel communityStatus = new JLabel(" ");
 	private final CommunityBrowser browser;
+	private SettingsView settingsView;
 	private final JTextField loadoutName = new JTextField();
 	private final JButton sectionsButton = new JButton();
 	private final JTextField publishName = new JTextField();
@@ -206,10 +207,21 @@ class ClickHelpersPanel extends PluginPanel
 
 		// Settings tools and practice live on separate tabs so they never mix
 		JTabbedPane tabs = new JTabbedPane();
+		settingsView = new SettingsView(configManager, config, colorPickerManager);
+		tabs.addTab("Settings", top(settingsView));
 		tabs.addTab("Loadouts", top(settingsTab));
 		tabs.addTab("Practice", top(practiceTab));
 		add(tabs, BorderLayout.NORTH);
 		update(false, null, new ArrayList<>());
+	}
+
+	/** Shows a setting's new value in the Settings tab; safe to call from any thread. */
+	void settingChanged(String key)
+	{
+		if (settingsView != null)
+		{
+			settingsView.settingChanged(key);
+		}
 	}
 
 	/** Shows the practice state; call on the Swing thread. */

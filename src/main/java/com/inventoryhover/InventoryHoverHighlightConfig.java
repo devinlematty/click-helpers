@@ -143,84 +143,35 @@ public interface InventoryHoverHighlightConfig extends Config
 	}
 
 
-	@ConfigSection(
-		name = "Areas",
-		description = "Where the highlight and clickable grid are shown",
-		position = 1
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String areasSection = "areas";
 
-	@ConfigSection(
-		name = "Click feedback",
-		description = "Flash and marker on the slot you click",
-		position = 2,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String clickSection = "click";
 
-	@ConfigSection(
-		name = "Missed clicks",
-		description = "Markers for clicks that do nothing or are refused",
-		position = 3,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String missSection = "misses";
 
-	@ConfigSection(
-		name = "Dead areas",
-		description = "Shading over the gaps where a click does nothing, per panel",
-		position = 4,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String deadSection = "dead";
 
-	@ConfigSection(
-		name = "Prayers and spells",
-		description = "Active prayer, selected spell and autocast highlights",
-		position = 5,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String prayerSection = "prayerspells";
 
-	@ConfigSection(
-		name = "Tick cue",
-		description = "Timing cue on prayers to help with prayer flicking",
-		position = 6,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String tickSection = "tick";
 
-	@ConfigSection(
-		name = "Click chart",
-		description = "Floating chart of your recent good, missed, refused and double clicks",
-		position = 7,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String chartSection = "stats";
 
-	@ConfigSection(
-		name = "Hide items",
-		description = "Hide items you do not click in a fight",
-		position = 8,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String itemsSection = "items";
 
-	@ConfigSection(
-		name = "Eat and drink delay",
-		description = "Shade food and potions while another one would be ignored",
-		position = 9,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String delaySection = "delays";
 
 
-	@ConfigSection(
-		name = "Switch practice",
-		description = "Hotkey for switch practice; the other practice settings are in the Click Helpers side panel",
-		position = 11,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String practiceSection = "practice";
 
 	@ConfigSection(
@@ -231,76 +182,31 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	String shareSection = "share";
 
-	@ConfigSection(
-		name = "Inventory: hover",
-		description = "Inventory and bank inventory hover settings",
-		position = 13,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String invHoverSection = "invHover";
 
-	@ConfigSection(
-		name = "Inventory: spotlight",
-		description = "Inventory and bank inventory spotlight settings",
-		position = 14,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String invSpotlightSection = "invSpotlight";
 
-	@ConfigSection(
-		name = "Inventory: miss dots",
-		description = "Inventory and bank inventory miss dots settings",
-		position = 15,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String invMissDotsSection = "invMissDots";
 
-	@ConfigSection(
-		name = "Prayer: hover",
-		description = "Prayer tab hover settings",
-		position = 16,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String prayerHoverSection = "prayerHover";
 
-	@ConfigSection(
-		name = "Prayer: spotlight",
-		description = "Prayer tab spotlight settings",
-		position = 17,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String prayerSpotlightSection = "prayerSpotlight";
 
-	@ConfigSection(
-		name = "Prayer: miss dots",
-		description = "Prayer tab miss dots settings",
-		position = 18,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String prayerMissDotsSection = "prayerMissDots";
 
-	@ConfigSection(
-		name = "Spellbook: hover",
-		description = "Spellbook hover settings",
-		position = 19,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String spellHoverSection = "spellHover";
 
-	@ConfigSection(
-		name = "Spellbook: spotlight",
-		description = "Spellbook spotlight settings",
-		position = 20,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String spellSpotlightSection = "spellSpotlight";
 
-	@ConfigSection(
-		name = "Spellbook: miss dots",
-		description = "Spellbook miss dots settings",
-		position = 21,
-		closedByDefault = true
-	)
+	// Shown in the side panel's Settings tab, see SettingsSections
 	String spellMissDotsSection = "spellMissDots";
 
 
@@ -318,6 +224,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "roundedAreas",
+		hidden = true,
 		name = "Round grid and dead areas to highlight radius",
 		description = "Round the clickable grid and the dead area shading with the hover highlight's corner radius."
 			+ "<br>Note: the game's clickable areas are square, so slot corners can look dead even though"
@@ -338,6 +245,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayers",
+		hidden = true,
 		name = "Prayers",
 		description = "Also highlight the hovered prayer in the prayer tab",
 		position = 0,
@@ -350,6 +258,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spells",
+		hidden = true,
 		name = "Spells",
 		description = "Also highlight the hovered spell in the spellbook",
 		position = 1,
@@ -362,6 +271,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "bankInventory",
+		hidden = true,
 		name = "Bank inventory",
 		description = "Also highlight the inventory shown next to the bank",
 		position = 2,
@@ -374,6 +284,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "hideWhenEmpty",
+		hidden = true,
 		name = "Off with empty inventory",
 		description = "Draw nothing while your inventory is empty, as if the plugin were off. Everything comes back as"
 			+ " soon as an item is in your inventory. Switch practice still shows",
@@ -387,6 +298,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "onlyItems",
+		hidden = true,
 		name = "Only slots with items",
 		description = "Skip empty inventory slots",
 		position = 3,
@@ -399,6 +311,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "grid",
+		hidden = true,
 		name = "Clickable grid",
 		description = "Outline every clickable area the hover highlight can fill."
 			+ "<br>In panel: only the panel under the mouse"
@@ -413,6 +326,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "gridShowEmpty",
+		hidden = true,
 		name = "Grid on empty slots",
 		description = "Also outline inventory slots with no item, so every clickable slot shows",
 		position = 5,
@@ -426,6 +340,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "gridColor",
+		hidden = true,
 		name = "Grid color",
 		description = "Color of the clickable grid outlines",
 		position = 6,
@@ -440,6 +355,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "clickFlash",
+		hidden = true,
 		name = "Click flash",
 		description = "Briefly flash the slot you clicked",
 		position = 0,
@@ -452,6 +368,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "clickMarker",
+		hidden = true,
 		name = "Queued click marker",
 		description = "Mark a clicked slot with a dot until the next game tick. The dot is yellow"
 			+ " (rejected click color) when the click lands during the eat or drink delay",
@@ -466,6 +383,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "clickFlashColor",
+		hidden = true,
 		name = "Flash color",
 		description = "Color of the click flash",
 		position = 2,
@@ -480,6 +398,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 50, max = 1000)
 	@ConfigItem(
 		keyName = "clickFlashDuration",
+		hidden = true,
 		name = "Flash duration",
 		description = "How long the click flash takes to fade",
 		position = 3,
@@ -493,6 +412,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "clickMarkerColor",
+		hidden = true,
 		name = "Marker color",
 		description = "Color of the queued click marker",
 		position = 4,
@@ -506,6 +426,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "doubleClickColor",
+		hidden = true,
 		name = "Double click color",
 		description = "Marker color when the same slot is clicked twice in one tick",
 		position = 5,
@@ -520,6 +441,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "deadClickMarker",
+		hidden = true,
 		name = "Dead click marker",
 		description = "Show a red ring where you click an empty slot or a gap with no interaction",
 		position = 0,
@@ -532,6 +454,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "rejectedClickMarker",
+		hidden = true,
 		name = "Rejected click marker",
 		description = "Show a yellow ring where a click reached the game but was refused,"
 			+ " like equipping an item with no inventory space for the swap",
@@ -546,6 +469,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "missOutline",
+		hidden = true,
 		name = "Miss outline",
 		description = "Outline the slot nearest a dead click, the one you most likely meant to click."
 			+ " It replaces the normal outline on that slot until it fades",
@@ -560,6 +484,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "misclickColor",
+		hidden = true,
 		name = "Dead click color",
 		description = "Color of the dead click marker",
 		position = 4,
@@ -573,6 +498,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "rejectedClickColor",
+		hidden = true,
 		name = "Rejected click color",
 		description = "Color of the rejected click marker",
 		position = 5,
@@ -585,6 +511,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "ringAnimation",
+		hidden = true,
 		name = "Ring animation",
 		description = "How dead and rejected click markers animate."
 			+ "<br>Grow: ring grows while it fades"
@@ -603,6 +530,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 100, max = 3000)
 	@ConfigItem(
 		keyName = "ringDuration",
+		hidden = true,
 		name = "Ring duration",
 		description = "How long dead and rejected click markers take to fade",
 		position = 7,
@@ -618,6 +546,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "missOutlineColor",
+		hidden = true,
 		name = "Miss outline color",
 		description = "Color of the miss outline",
 		position = 10,
@@ -632,6 +561,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 100, max = 10000)
 	@ConfigItem(
 		keyName = "missOutlineDuration",
+		hidden = true,
 		name = "Miss outline duration",
 		description = "How long the miss outline stays before it is gone",
 		position = 11,
@@ -648,6 +578,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "missOutlineWidth",
+		hidden = true,
 		name = "Miss outline width",
 		description = "Line width of the miss outline in pixels; 0 makes it one thicker than the tab's hover outline",
 		position = 12,
@@ -664,6 +595,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "deadAreas",
+		hidden = true,
 		name = "Dead areas",
 		description = "Shade the gaps where a click does nothing."
 			+ "<br>In panel: only the panel under the mouse"
@@ -678,6 +610,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "deadInventory",
+		hidden = true,
 		name = "Inventory",
 		description = "Shade dead areas in the inventory",
 		position = 1,
@@ -691,6 +624,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "deadInventoryColor",
+		hidden = true,
 		name = "Inventory color",
 		description = "Color of the dead areas in the inventory",
 		position = 2,
@@ -703,6 +637,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "deadBank",
+		hidden = true,
 		name = "Bank inventory",
 		description = "Shade dead areas in the inventory shown next to the bank",
 		position = 3,
@@ -716,6 +651,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "deadBankColor",
+		hidden = true,
 		name = "Bank inventory color",
 		description = "Color of the dead areas in the bank inventory",
 		position = 4,
@@ -728,6 +664,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "deadPrayers",
+		hidden = true,
 		name = "Prayers",
 		description = "Shade dead areas in the prayer tab",
 		position = 5,
@@ -741,6 +678,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "deadPrayersColor",
+		hidden = true,
 		name = "Prayers color",
 		description = "Color of the dead areas in the prayer tab",
 		position = 6,
@@ -753,6 +691,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "deadSpells",
+		hidden = true,
 		name = "Spells",
 		description = "Shade dead areas in the spellbook",
 		position = 7,
@@ -766,6 +705,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "deadSpellsColor",
+		hidden = true,
 		name = "Spells color",
 		description = "Color of the dead areas in the spellbook",
 		position = 8,
@@ -778,6 +718,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "deadOuterAreas",
+		hidden = true,
 		name = "Cover whole prayer and spell tab",
 		description = "Also shade the rest of the prayer and spellbook tab, like the empty space left by a filter."
 			+ " Clicks there count as misses. Filter and back buttons stay unshaded",
@@ -793,6 +734,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "activePrayers",
+		hidden = true,
 		name = "Active prayer highlight",
 		description = "Replace the game's active prayer glow with a highlight that follows the"
 			+ " server-confirmed prayer state, so it does not flicker when clicking fast",
@@ -806,6 +748,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "pendingPrayers",
+		hidden = true,
 		name = "Pending prayer state",
 		description = "Show a dashed outline from your click until the server confirms the prayer change",
 		position = 1,
@@ -818,6 +761,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "selectedSpell",
+		hidden = true,
 		name = "Selected spell highlight",
 		description = "Give a spell selected for manual casting the same gold highlight as an active prayer",
 		position = 2,
@@ -830,6 +774,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "autocastMarker",
+		hidden = true,
 		name = "Autocast marker",
 		description = "Outline the spell set to autocast; hovering it shows the hover highlight instead",
 		position = 3,
@@ -843,6 +788,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "activePrayerColor",
+		hidden = true,
 		name = "Active outline",
 		description = "Outline color of an active prayer or selected spell",
 		position = 4,
@@ -856,6 +802,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "activePrayerFill",
+		hidden = true,
 		name = "Active fill",
 		description = "Fill color of an active prayer or selected spell",
 		position = 5,
@@ -869,6 +816,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "autocastColor",
+		hidden = true,
 		name = "Autocast color",
 		description = "Color of the autocast marker",
 		position = 6,
@@ -883,6 +831,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "tickCue",
+		hidden = true,
 		name = "Mid-tick cue",
 		description = "Show progress through the click window on the hovered prayer."
 			+ "<br>Pulse: brightens at the cue position"
@@ -898,6 +847,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "tickCueAllPrayers",
+		hidden = true,
 		name = "Cue on listed prayers",
 		description = "Also show the mid-tick cue on the prayers in the list below, even when not hovered",
 		position = 1,
@@ -910,6 +860,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "cuePrayers",
+		hidden = true,
 		name = "Cue prayers",
 		description = "Comma separated prayer names that get the mid-tick cue; * is a wildcard, so * means every prayer",
 		position = 2,
@@ -923,6 +874,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "pulseColor",
+		hidden = true,
 		name = "Pulse color",
 		description = "Color of the mid-tick cue pulse",
 		position = 3,
@@ -937,6 +889,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 300)
 	@ConfigItem(
 		keyName = "tickLatency",
+		hidden = true,
 		name = "Mid-tick cue latency",
 		description = "Your round-trip ping to the world. A click must reach the server before"
 			+ " its tick, so the click window closes this long before the client sees the next tick",
@@ -952,6 +905,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 90)
 	@ConfigItem(
 		keyName = "pulsePosition",
+		hidden = true,
 		name = "Cue position",
 		description = "Where in the click window every cue mode kicks off. Slightly before the middle"
 			+ " leaves room for reaction time while early clicks stay in the same tick",
@@ -967,6 +921,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "clickChart",
+		hidden = true,
 		name = "Click chart",
 		description = "Floating chart of your recent clicks: clean click rate, good, missed, refused and"
 			+ " double clicks. Alt-drag it to move it",
@@ -980,6 +935,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "clickChartHotkey",
+		hidden = true,
 		name = "Click chart hotkey",
 		description = "Hotkey that shows or hides the click chart",
 		position = 1,
@@ -992,6 +948,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "clickChartUnit",
+		hidden = true,
 		name = "Time unit",
 		description = "Measure the chart in seconds or in game ticks (0.6 seconds each)",
 		position = 2,
@@ -1005,6 +962,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 1, max = 300)
 	@ConfigItem(
 		keyName = "clickChartInterval",
+		hidden = true,
 		name = "Bar interval",
 		description = "Seconds or ticks each bar covers",
 		position = 3,
@@ -1018,6 +976,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 4, max = 120)
 	@ConfigItem(
 		keyName = "clickChartBars",
+		hidden = true,
 		name = "Bars",
 		description = "How many bars to show; the chart covers bars times the interval",
 		position = 4,
@@ -1032,6 +991,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 90, max = 600)
 	@ConfigItem(
 		keyName = "clickChartWidth",
+		hidden = true,
 		name = "Width",
 		description = "Width of the chart in pixels; text shortens to fit narrow charts",
 		position = 5,
@@ -1046,6 +1006,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 15, max = 300)
 	@ConfigItem(
 		keyName = "clickChartHeight",
+		hidden = true,
 		name = "Bar height",
 		description = "Height of the bar area in pixels",
 		position = 6,
@@ -1058,6 +1019,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "clickChartLegend",
+		hidden = true,
 		name = "Legend",
 		description = "Show the colored legend with the counts for the window",
 		position = 7,
@@ -1070,6 +1032,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "clickChartTimeAxis",
+		hidden = true,
 		name = "Time labels",
 		description = "Show the time labels under the bars",
 		position = 8,
@@ -1082,6 +1045,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "clickChartAverage",
+		hidden = true,
 		name = "Moving average",
 		description = "Draw a line of the average clicks per bar over the last few bars",
 		position = 9,
@@ -1095,6 +1059,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 2, max = 60)
 	@ConfigItem(
 		keyName = "clickChartAverageBars",
+		hidden = true,
 		name = "Average over",
 		description = "How many bars the moving average covers",
 		position = 10,
@@ -1115,6 +1080,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "hideItems",
+		hidden = true,
 		name = "Hide non-fight items",
 		description = "Hide the icon of items with no fight action, such as items with only Use, Open"
 			+ " or Bury, and noted items. They keep a faint outline and still work when clicked",
@@ -1128,6 +1094,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "hideItemsHotkey",
+		hidden = true,
 		name = "Hide toggle hotkey",
 		description = "Hotkey that turns the item hiding on and off; when unset, hiding stays on",
 		position = 1,
@@ -1140,6 +1107,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "fightActions",
+		hidden = true,
 		name = "Fight actions",
 		description = "Comma separated inventory actions that keep an item visible",
 		position = 2,
@@ -1152,6 +1120,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "alwaysShowItems",
+		hidden = true,
 		name = "Always show",
 		description = "Comma separated item names that are never hidden; * is a wildcard",
 		position = 3,
@@ -1164,6 +1133,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "hiddenItemShowOutline",
+		hidden = true,
 		name = "Show hidden item outline",
 		description = "Draw a faint outline of a hidden item's icon; turn off with the backfill to leave the slot looking empty",
 		position = 4,
@@ -1176,6 +1146,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "hiddenItemShowFill",
+		hidden = true,
 		name = "Show hidden item backfill",
 		description = "Shade the slot of a hidden item; turn off with the outline to leave the slot looking empty",
 		position = 5,
@@ -1189,6 +1160,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "hiddenItemOutline",
+		hidden = true,
 		name = "Hidden item outline",
 		description = "Outline drawn in place of a hidden item's icon",
 		position = 6,
@@ -1202,6 +1174,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "hiddenItemFill",
+		hidden = true,
 		name = "Hidden item backfill",
 		description = "Fill drawn behind a hidden item so you can tell the slot is taken",
 		position = 7,
@@ -1216,6 +1189,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "cooldowns",
+		hidden = true,
 		name = "Eat and drink delay",
 		description = "Mark food or potions while eating or drinking another one would be ignored."
 			+ " Every item with the same action shares the delay; karambwans have their own",
@@ -1229,6 +1203,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "cooldownStyle",
+		hidden = true,
 		name = "Delay style",
 		description = "How the delay is drawn."
 			+ "<br>Fill: shade the whole slot"
@@ -1245,6 +1220,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "cooldownColor",
+		hidden = true,
 		name = "Delay color",
 		description = "Color of the eat and drink delay",
 		position = 2,
@@ -1257,6 +1233,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "cooldownOutline",
+		hidden = true,
 		name = "Delay outline",
 		description = "Outline items that cannot be eaten or drunk yet. Works with or without the delay shading above",
 		position = 3,
@@ -1269,6 +1246,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "cooldownOutlineStyle",
+		hidden = true,
 		name = "Delay outline style",
 		description = "Solid: a steady outline until the delay ends. Fade: the outline fades out as the delay runs out."
 			+ " Trace: the outline shrinks around the slot as the delay runs out",
@@ -1283,6 +1261,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "cooldownOutlineColor",
+		hidden = true,
 		name = "Delay outline color",
 		description = "Color of the delay outline",
 		position = 5,
@@ -1299,6 +1278,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "cooldownOutlineWidth",
+		hidden = true,
 		name = "Delay outline width",
 		description = "Line width of the delay outline in pixels",
 		position = 6,
@@ -1340,6 +1320,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "practiceHotkey",
+		hidden = true,
 		name = "Practice hotkey",
 		description = "Hotkey that starts or stops switch practice",
 		position = 1,
@@ -1533,8 +1514,8 @@ public interface InventoryHoverHighlightConfig extends Config
 	@ConfigItem(
 		keyName = "sidePanel",
 		name = "Side panel",
-		description = "Add a Click Helpers side panel with Export and Import buttons and the switch practice"
-			+ " progress chart",
+		description = "Add the Click Helpers side panel. It holds all the other settings, loadouts and switch practice,"
+			+ " so turn it back on here to change them",
 		position = 2,
 		section = shareSection
 	)
@@ -1561,6 +1542,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "syncTabSettings",
+		hidden = true,
 		name = "Sync tab settings",
 		description = "Keep the inventory, prayer and spellbook settings the same: changing one tab's setting"
 			+ " changes it in the other tabs too. Turning it on copies the inventory settings to the others",
@@ -1575,6 +1557,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invStyle",
+		hidden = true,
 		name = "Style",
 		description = "How the hovered area is drawn",
 		position = 0,
@@ -1588,6 +1571,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "invOutlineColor",
+		hidden = true,
 		name = "Outline color",
 		description = "Color of the hover outline",
 		position = 1,
@@ -1601,6 +1585,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "invFillColor",
+		hidden = true,
 		name = "Fill color",
 		description = "Color of the hover fill",
 		position = 2,
@@ -1614,6 +1599,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 1, max = 4)
 	@ConfigItem(
 		keyName = "invOutlineWidth",
+		hidden = true,
 		name = "Outline width",
 		description = "Thickness of outlines in pixels",
 		position = 3,
@@ -1627,6 +1613,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 10)
 	@ConfigItem(
 		keyName = "invCornerRadius",
+		hidden = true,
 		name = "Corner radius",
 		description = "Rounds the corners of highlights and shading; 0 for square",
 		position = 4,
@@ -1641,6 +1628,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 5000)
 	@ConfigItem(
 		keyName = "invHoverFade",
+		hidden = true,
 		name = "Hover fade-out",
 		description = "How long a highlight, including its tick cue, fades after the mouse leaves; 0 to disable",
 		position = 5,
@@ -1655,6 +1643,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 1000)
 	@ConfigItem(
 		keyName = "invHoverDelay",
+		hidden = true,
 		name = "Hover delay",
 		description = "How long the mouse must rest on an area before it is highlighted; 0 for instant",
 		position = 6,
@@ -1667,6 +1656,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invHideWhenMenuOpen",
+		hidden = true,
 		name = "Hide when right-click menu open",
 		description = "Do not highlight while a right-click menu is open",
 		position = 7,
@@ -1679,6 +1669,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invDiscoMode",
+		hidden = true,
 		name = "Disco mode",
 		description = "Pick a random hover color every time the mouse moves to a new area",
 		position = 8,
@@ -1693,6 +1684,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 5000)
 	@ConfigItem(
 		keyName = "invDiscoInterval",
+		hidden = true,
 		name = "Disco interval",
 		description = "In disco mode, also pick a new color this often while the mouse rests; 0 to only change on a new area",
 		position = 9,
@@ -1705,6 +1697,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invKeepIconColors",
+		hidden = true,
 		name = "Keep icon colors on hover",
 		description = "Leave the icon out of the hover fill, so the fill only colors the slot background",
 		position = 10,
@@ -1717,6 +1710,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSlotBackground",
+		hidden = true,
 		name = "Slot background",
 		description = "Color the background of every slot; icons stay on top",
 		position = 11,
@@ -1730,6 +1724,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "invSlotBackgroundColor",
+		hidden = true,
 		name = "Slot background color",
 		description = "Background color of the slots",
 		position = 12,
@@ -1744,6 +1739,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlight",
+		hidden = true,
 		name = "Spotlight",
 		description = "Light glow at the mouse that dims the panel outward, to show what is in reach",
 		position = 0,
@@ -1757,6 +1753,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 20, max = 2000)
 	@ConfigItem(
 		keyName = "invSpotlightRadius",
+		hidden = true,
 		name = "Radius",
 		description = "Distance in pixels from the mouse where the dimming is full",
 		position = 1,
@@ -1770,6 +1767,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "invSpotlightDim",
+		hidden = true,
 		name = "Dim color",
 		description = "Color at the edge of the spotlight and beyond",
 		position = 2,
@@ -1783,6 +1781,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "invSpotlightGlow",
+		hidden = true,
 		name = "Glow color",
 		description = "Color of the glow at the mouse",
 		position = 3,
@@ -1797,6 +1796,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 100)
 	@ConfigItem(
 		keyName = "invSpotlightGlowSize",
+		hidden = true,
 		name = "Glow size",
 		description = "How far the glow reaches, as a share of the radius; 0 for no glow, so only the dimming shows",
 		position = 4,
@@ -1809,6 +1809,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightShape",
+		hidden = true,
 		name = "Gradient",
 		description = "How the spotlight fades: Smooth evenly, Soft eased in and out, Sharp with a crisp edge,"
 			+ " or Banded in steps",
@@ -1822,6 +1823,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightType",
+		hidden = true,
 		name = "Gradient type",
 		description = "The spotlight's shape, or a pattern in it. Shapes: circle, ellipse, square, diamond, star,"
 			+ " hexagon, cross, flower, and vertical or horizontal bands. Patterns on a circle: rings, a turning spiral,"
@@ -1836,6 +1838,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightMotion",
+		hidden = true,
 		name = "Gradient motion",
 		description = "Move the spotlight's shape: Spin turns it slowly, Wobble ripples its edge. Uses the effect speed",
 		position = 7,
@@ -1848,6 +1851,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightEffect",
+		hidden = true,
 		name = "Effect",
 		description = "An animation on the spotlight: Pulse breathes in and out, Ripples sends rings outward,"
 			+ " and Sparkles, Embers, Orbit and Snow add particles",
@@ -1861,6 +1865,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightEffectColor",
+		hidden = true,
 		name = "Effect on",
 		description = "Where the effect shows. Overlay draws it on top within the spotlight radius and never changes"
 			+ " the spotlight itself. Glow, Gradient and Whole keep it to the glow near the mouse, the gradient past"
@@ -1875,6 +1880,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightEffectReplace",
+		hidden = true,
 		name = "Replace with effect",
 		description = "Draw the Effect on area only as the effect, in the gradient's own colors, instead of a smooth"
 			+ " fill; with Gradient and Sparkles, the gradient is made of sparkles. Has no effect with Overlay",
@@ -1888,6 +1894,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightEffectCustom",
+		hidden = true,
 		name = "Custom effect color",
 		description = "Use the effect color below. When off, each particle and ring takes the color the spotlight"
 			+ " draws under it, so it shades from the glow into the gradient and falloff as it moves",
@@ -1902,6 +1909,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "invSpotlightEffectOverride",
+		hidden = true,
 		name = "Effect color",
 		description = "Color of the effect, used when Custom effect color is on",
 		position = 12,
@@ -1914,6 +1922,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightEffectOnClick",
+		hidden = true,
 		name = "Effect on click",
 		description = "Play the effect as a short burst when you click, instead of all the time",
 		position = 13,
@@ -1926,6 +1935,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightClickResult",
+		hidden = true,
 		name = "Click result colors",
 		description = "With Effect on click, color each burst by how the click went, using the three colors below",
 		position = 14,
@@ -1939,6 +1949,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "invSpotlightClickSuccessColor",
+		hidden = true,
 		name = "Good click color",
 		description = "Burst color for a good click, one that did something, with Click result colors on",
 		position = 15,
@@ -1952,6 +1963,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "invSpotlightClickMissColor",
+		hidden = true,
 		name = "Bad click color",
 		description = "Burst color for a bad click, one that hit nothing, with Click result colors on",
 		position = 16,
@@ -1965,6 +1977,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "invSpotlightClickRefusedColor",
+		hidden = true,
 		name = "Refused click color",
 		description = "Burst color when the game refused the click, with Click result colors on",
 		position = 17,
@@ -1982,6 +1995,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Units(Units.MILLISECONDS)
 	@ConfigItem(
 		keyName = "invSpotlightEffectLength",
+		hidden = true,
 		name = "Effect length",
 		description = "How long each click burst lasts with Effect on click, and each detached effect with Detach"
 			+ " from mouse",
@@ -2000,6 +2014,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Units(Units.PERCENT)
 	@ConfigItem(
 		keyName = "invSpotlightEffectSpeed",
+		hidden = true,
 		name = "Effect speed",
 		description = "How fast the effect moves: 100% is normal, lower is slower, higher is faster",
 		position = 19,
@@ -2017,6 +2032,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Units(Units.PERCENT)
 	@ConfigItem(
 		keyName = "invSpotlightEffectSize",
+		hidden = true,
 		name = "Effect size",
 		description = "How big the effect's particles, rings and trails are: 100% is normal",
 		position = 20,
@@ -2029,6 +2045,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightEffectDetach",
+		hidden = true,
 		name = "Detach from mouse",
 		description = "Let each effect run on its own where it started: where you clicked with Effect on click, else"
 			+ " where the mouse entered the panel. Each runs for the effect length wherever the mouse goes, and new"
@@ -2043,6 +2060,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightClickAnywhere",
+		hidden = true,
 		name = "Click effects anywhere",
 		description = "With Effect on click, clicks outside the inventory, prayer and spellbook panels, such as on the"
 			+ " game world, also play this effect where you clicked",
@@ -2061,6 +2079,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Units(Units.MILLISECONDS)
 	@ConfigItem(
 		keyName = "invSpotlightClickAnywhereDelay",
+		hidden = true,
 		name = "Click anywhere delay",
 		description = "Shortest time between click effects outside the panels; clicks sooner than this play nothing."
 			+ " 0 plays one for every click",
@@ -2074,6 +2093,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightAlways",
+		hidden = true,
 		name = "When not hovered",
 		description = "Also spotlight this panel while the mouse is outside it",
 		position = 24,
@@ -2086,6 +2106,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightDeadOnly",
+		hidden = true,
 		name = "Only dead areas",
 		description = "Only dim and light the dead areas, so slots keep their colors",
 		position = 25,
@@ -2098,6 +2119,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invSpotlightFalloff",
+		hidden = true,
 		name = "Falloff",
 		description = "Past the falloff start, run the spotlight gradient in reverse: the dim fades out, then the falloff color fades in by the falloff end",
 		position = 26,
@@ -2112,6 +2134,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 20, max = 4000)
 	@ConfigItem(
 		keyName = "invSpotlightFalloffDistance",
+		hidden = true,
 		name = "Falloff start",
 		description = "Distance in pixels from the mouse where the dimming starts fading back out",
 		position = 27,
@@ -2125,6 +2148,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 20, max = 4000)
 	@ConfigItem(
 		keyName = "invSpotlightFalloffEnd",
+		hidden = true,
 		name = "Falloff end",
 		description = "Distance in pixels from the mouse where the dimming is gone; kept past the falloff start",
 		position = 28,
@@ -2138,6 +2162,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "invSpotlightFalloffColor",
+		hidden = true,
 		name = "Falloff color",
 		description = "Color the falloff turns into by the falloff end, mirroring the glow at the mouse; kept beyond it."
 			+ " Leave its alpha at 0 for the dimming to just fade out",
@@ -2155,6 +2180,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "invSpotlightFalloffColorEnd",
+		hidden = true,
 		name = "Falloff color end",
 		description = "Distance in pixels from the mouse where the falloff color has faded back out, over the same"
 			+ " length it took to fade in. 0 keeps the falloff color out to the panel's edges",
@@ -2169,6 +2195,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "invSpotlightFadeEndColor",
+		hidden = true,
 		name = "Fade end color",
 		description = "Color the falloff color blends into at the falloff color end, kept beyond it. Fully see-through"
 			+ " (the default) fades it out to nothing. Needs a falloff color end",
@@ -2184,6 +2211,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invMissDots",
+		hidden = true,
 		name = "Miss dots",
 		description = "Leave a small dot at every dead click, so you can see where your misses land",
 		position = 0,
@@ -2197,6 +2225,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "invMissDotColor",
+		hidden = true,
 		name = "Color",
 		description = "Color of the miss dots",
 		position = 1,
@@ -2209,6 +2238,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invMissDotShape",
+		hidden = true,
 		name = "Shape",
 		description = "Shape of the miss dots",
 		position = 2,
@@ -2221,6 +2251,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "invMissDotHollow",
+		hidden = true,
 		name = "Hollow",
 		description = "Draw the miss dots as outlines instead of filled shapes",
 		position = 2,
@@ -2234,6 +2265,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 2, max = 16)
 	@ConfigItem(
 		keyName = "invMissDotSize",
+		hidden = true,
 		name = "Size",
 		description = "Size of the miss dots in pixels",
 		position = 3,
@@ -2248,6 +2280,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 1, max = 600)
 	@ConfigItem(
 		keyName = "invMissDotDuration",
+		hidden = true,
 		name = "Duration",
 		description = "How long each miss dot stays; it fades over this time",
 		position = 4,
@@ -2262,6 +2295,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerStyle",
+		hidden = true,
 		name = "Style",
 		description = "How the hovered area is drawn",
 		position = 0,
@@ -2275,6 +2309,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "prayerOutlineColor",
+		hidden = true,
 		name = "Outline color",
 		description = "Color of the hover outline",
 		position = 1,
@@ -2288,6 +2323,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "prayerFillColor",
+		hidden = true,
 		name = "Fill color",
 		description = "Color of the hover fill",
 		position = 2,
@@ -2301,6 +2337,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 1, max = 4)
 	@ConfigItem(
 		keyName = "prayerOutlineWidth",
+		hidden = true,
 		name = "Outline width",
 		description = "Thickness of outlines in pixels",
 		position = 3,
@@ -2314,6 +2351,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 10)
 	@ConfigItem(
 		keyName = "prayerCornerRadius",
+		hidden = true,
 		name = "Corner radius",
 		description = "Rounds the corners of highlights and shading; 0 for square",
 		position = 4,
@@ -2328,6 +2366,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 5000)
 	@ConfigItem(
 		keyName = "prayerHoverFade",
+		hidden = true,
 		name = "Hover fade-out",
 		description = "How long a highlight, including its tick cue, fades after the mouse leaves; 0 to disable",
 		position = 5,
@@ -2342,6 +2381,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 1000)
 	@ConfigItem(
 		keyName = "prayerHoverDelay",
+		hidden = true,
 		name = "Hover delay",
 		description = "How long the mouse must rest on an area before it is highlighted; 0 for instant",
 		position = 6,
@@ -2354,6 +2394,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerHideWhenMenuOpen",
+		hidden = true,
 		name = "Hide when right-click menu open",
 		description = "Do not highlight while a right-click menu is open",
 		position = 7,
@@ -2366,6 +2407,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerDiscoMode",
+		hidden = true,
 		name = "Disco mode",
 		description = "Pick a random hover color every time the mouse moves to a new area",
 		position = 8,
@@ -2380,6 +2422,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 5000)
 	@ConfigItem(
 		keyName = "prayerDiscoInterval",
+		hidden = true,
 		name = "Disco interval",
 		description = "In disco mode, also pick a new color this often while the mouse rests; 0 to only change on a new area",
 		position = 9,
@@ -2392,6 +2435,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerKeepIconColors",
+		hidden = true,
 		name = "Keep icon colors on hover",
 		description = "Leave the icon out of the hover fill, so the fill only colors the slot background",
 		position = 10,
@@ -2404,6 +2448,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSlotBackground",
+		hidden = true,
 		name = "Slot background",
 		description = "Color the background of every slot; icons stay on top",
 		position = 11,
@@ -2417,6 +2462,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "prayerSlotBackgroundColor",
+		hidden = true,
 		name = "Slot background color",
 		description = "Background color of the slots",
 		position = 12,
@@ -2431,6 +2477,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlight",
+		hidden = true,
 		name = "Spotlight",
 		description = "Light glow at the mouse that dims the panel outward, to show what is in reach",
 		position = 0,
@@ -2444,6 +2491,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 20, max = 2000)
 	@ConfigItem(
 		keyName = "prayerSpotlightRadius",
+		hidden = true,
 		name = "Radius",
 		description = "Distance in pixels from the mouse where the dimming is full",
 		position = 1,
@@ -2457,6 +2505,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "prayerSpotlightDim",
+		hidden = true,
 		name = "Dim color",
 		description = "Color at the edge of the spotlight and beyond",
 		position = 2,
@@ -2470,6 +2519,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "prayerSpotlightGlow",
+		hidden = true,
 		name = "Glow color",
 		description = "Color of the glow at the mouse",
 		position = 3,
@@ -2484,6 +2534,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 100)
 	@ConfigItem(
 		keyName = "prayerSpotlightGlowSize",
+		hidden = true,
 		name = "Glow size",
 		description = "How far the glow reaches, as a share of the radius; 0 for no glow, so only the dimming shows",
 		position = 4,
@@ -2496,6 +2547,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlightShape",
+		hidden = true,
 		name = "Gradient",
 		description = "How the spotlight fades: Smooth evenly, Soft eased in and out, Sharp with a crisp edge,"
 			+ " or Banded in steps",
@@ -2509,6 +2561,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlightType",
+		hidden = true,
 		name = "Gradient type",
 		description = "The spotlight's shape, or a pattern in it. Shapes: circle, ellipse, square, diamond, star,"
 			+ " hexagon, cross, flower, and vertical or horizontal bands. Patterns on a circle: rings, a turning spiral,"
@@ -2523,6 +2576,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlightMotion",
+		hidden = true,
 		name = "Gradient motion",
 		description = "Move the spotlight's shape: Spin turns it slowly, Wobble ripples its edge. Uses the effect speed",
 		position = 7,
@@ -2535,6 +2589,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlightEffect",
+		hidden = true,
 		name = "Effect",
 		description = "An animation on the spotlight: Pulse breathes in and out, Ripples sends rings outward,"
 			+ " and Sparkles, Embers, Orbit and Snow add particles",
@@ -2548,6 +2603,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlightEffectColor",
+		hidden = true,
 		name = "Effect on",
 		description = "Where the effect shows. Overlay draws it on top within the spotlight radius and never changes"
 			+ " the spotlight itself. Glow, Gradient and Whole keep it to the glow near the mouse, the gradient past"
@@ -2562,6 +2618,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlightEffectReplace",
+		hidden = true,
 		name = "Replace with effect",
 		description = "Draw the Effect on area only as the effect, in the gradient's own colors, instead of a smooth"
 			+ " fill; with Gradient and Sparkles, the gradient is made of sparkles. Has no effect with Overlay",
@@ -2575,6 +2632,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlightEffectCustom",
+		hidden = true,
 		name = "Custom effect color",
 		description = "Use the effect color below. When off, each particle and ring takes the color the spotlight"
 			+ " draws under it, so it shades from the glow into the gradient and falloff as it moves",
@@ -2589,6 +2647,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "prayerSpotlightEffectOverride",
+		hidden = true,
 		name = "Effect color",
 		description = "Color of the effect, used when Custom effect color is on",
 		position = 12,
@@ -2601,6 +2660,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlightEffectOnClick",
+		hidden = true,
 		name = "Effect on click",
 		description = "Play the effect as a short burst when you click, instead of all the time",
 		position = 13,
@@ -2613,6 +2673,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlightClickResult",
+		hidden = true,
 		name = "Click result colors",
 		description = "With Effect on click, color each burst by how the click went, using the three colors below",
 		position = 14,
@@ -2626,6 +2687,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "prayerSpotlightClickSuccessColor",
+		hidden = true,
 		name = "Good click color",
 		description = "Burst color for a good click, one that did something, with Click result colors on",
 		position = 15,
@@ -2639,6 +2701,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "prayerSpotlightClickMissColor",
+		hidden = true,
 		name = "Bad click color",
 		description = "Burst color for a bad click, one that hit nothing, with Click result colors on",
 		position = 16,
@@ -2652,6 +2715,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "prayerSpotlightClickRefusedColor",
+		hidden = true,
 		name = "Refused click color",
 		description = "Burst color when the game refused the click, with Click result colors on",
 		position = 17,
@@ -2669,6 +2733,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Units(Units.MILLISECONDS)
 	@ConfigItem(
 		keyName = "prayerSpotlightEffectLength",
+		hidden = true,
 		name = "Effect length",
 		description = "How long each click burst lasts with Effect on click, and each detached effect with Detach"
 			+ " from mouse",
@@ -2687,6 +2752,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Units(Units.PERCENT)
 	@ConfigItem(
 		keyName = "prayerSpotlightEffectSpeed",
+		hidden = true,
 		name = "Effect speed",
 		description = "How fast the effect moves: 100% is normal, lower is slower, higher is faster",
 		position = 19,
@@ -2704,6 +2770,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Units(Units.PERCENT)
 	@ConfigItem(
 		keyName = "prayerSpotlightEffectSize",
+		hidden = true,
 		name = "Effect size",
 		description = "How big the effect's particles, rings and trails are: 100% is normal",
 		position = 20,
@@ -2716,6 +2783,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlightEffectDetach",
+		hidden = true,
 		name = "Detach from mouse",
 		description = "Let each effect run on its own where it started: where you clicked with Effect on click, else"
 			+ " where the mouse entered the panel. Each runs for the effect length wherever the mouse goes, and new"
@@ -2730,6 +2798,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlightAlways",
+		hidden = true,
 		name = "When not hovered",
 		description = "Also spotlight this panel while the mouse is outside it",
 		position = 22,
@@ -2742,6 +2811,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlightDeadOnly",
+		hidden = true,
 		name = "Only dead areas",
 		description = "Only dim and light the dead areas, so slots keep their colors",
 		position = 23,
@@ -2754,6 +2824,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerSpotlightFalloff",
+		hidden = true,
 		name = "Falloff",
 		description = "Past the falloff start, run the spotlight gradient in reverse: the dim fades out, then the falloff color fades in by the falloff end",
 		position = 24,
@@ -2768,6 +2839,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 20, max = 4000)
 	@ConfigItem(
 		keyName = "prayerSpotlightFalloffDistance",
+		hidden = true,
 		name = "Falloff start",
 		description = "Distance in pixels from the mouse where the dimming starts fading back out",
 		position = 25,
@@ -2781,6 +2853,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 20, max = 4000)
 	@ConfigItem(
 		keyName = "prayerSpotlightFalloffEnd",
+		hidden = true,
 		name = "Falloff end",
 		description = "Distance in pixels from the mouse where the dimming is gone; kept past the falloff start",
 		position = 26,
@@ -2794,6 +2867,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "prayerSpotlightFalloffColor",
+		hidden = true,
 		name = "Falloff color",
 		description = "Color the falloff turns into by the falloff end, mirroring the glow at the mouse; kept beyond it."
 			+ " Leave its alpha at 0 for the dimming to just fade out",
@@ -2811,6 +2885,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "prayerSpotlightFalloffColorEnd",
+		hidden = true,
 		name = "Falloff color end",
 		description = "Distance in pixels from the mouse where the falloff color has faded back out, over the same"
 			+ " length it took to fade in. 0 keeps the falloff color out to the panel's edges",
@@ -2825,6 +2900,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "prayerSpotlightFadeEndColor",
+		hidden = true,
 		name = "Fade end color",
 		description = "Color the falloff color blends into at the falloff color end, kept beyond it. Fully see-through"
 			+ " (the default) fades it out to nothing. Needs a falloff color end",
@@ -2840,6 +2916,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerMissDots",
+		hidden = true,
 		name = "Miss dots",
 		description = "Leave a small dot at every dead click, so you can see where your misses land",
 		position = 0,
@@ -2853,6 +2930,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "prayerMissDotColor",
+		hidden = true,
 		name = "Color",
 		description = "Color of the miss dots",
 		position = 1,
@@ -2865,6 +2943,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerMissDotShape",
+		hidden = true,
 		name = "Shape",
 		description = "Shape of the miss dots",
 		position = 2,
@@ -2877,6 +2956,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "prayerMissDotHollow",
+		hidden = true,
 		name = "Hollow",
 		description = "Draw the miss dots as outlines instead of filled shapes",
 		position = 2,
@@ -2890,6 +2970,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 2, max = 16)
 	@ConfigItem(
 		keyName = "prayerMissDotSize",
+		hidden = true,
 		name = "Size",
 		description = "Size of the miss dots in pixels",
 		position = 3,
@@ -2904,6 +2985,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 1, max = 600)
 	@ConfigItem(
 		keyName = "prayerMissDotDuration",
+		hidden = true,
 		name = "Duration",
 		description = "How long each miss dot stays; it fades over this time",
 		position = 4,
@@ -2918,6 +3000,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellStyle",
+		hidden = true,
 		name = "Style",
 		description = "How the hovered area is drawn",
 		position = 0,
@@ -2931,6 +3014,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "spellOutlineColor",
+		hidden = true,
 		name = "Outline color",
 		description = "Color of the hover outline",
 		position = 1,
@@ -2944,6 +3028,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "spellFillColor",
+		hidden = true,
 		name = "Fill color",
 		description = "Color of the hover fill",
 		position = 2,
@@ -2957,6 +3042,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 1, max = 4)
 	@ConfigItem(
 		keyName = "spellOutlineWidth",
+		hidden = true,
 		name = "Outline width",
 		description = "Thickness of outlines in pixels",
 		position = 3,
@@ -2970,6 +3056,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 10)
 	@ConfigItem(
 		keyName = "spellCornerRadius",
+		hidden = true,
 		name = "Corner radius",
 		description = "Rounds the corners of highlights and shading; 0 for square",
 		position = 4,
@@ -2984,6 +3071,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 5000)
 	@ConfigItem(
 		keyName = "spellHoverFade",
+		hidden = true,
 		name = "Hover fade-out",
 		description = "How long a highlight, including its tick cue, fades after the mouse leaves; 0 to disable",
 		position = 5,
@@ -2998,6 +3086,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 1000)
 	@ConfigItem(
 		keyName = "spellHoverDelay",
+		hidden = true,
 		name = "Hover delay",
 		description = "How long the mouse must rest on an area before it is highlighted; 0 for instant",
 		position = 6,
@@ -3010,6 +3099,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellHideWhenMenuOpen",
+		hidden = true,
 		name = "Hide when right-click menu open",
 		description = "Do not highlight while a right-click menu is open",
 		position = 7,
@@ -3022,6 +3112,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellDiscoMode",
+		hidden = true,
 		name = "Disco mode",
 		description = "Pick a random hover color every time the mouse moves to a new area",
 		position = 8,
@@ -3036,6 +3127,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 5000)
 	@ConfigItem(
 		keyName = "spellDiscoInterval",
+		hidden = true,
 		name = "Disco interval",
 		description = "In disco mode, also pick a new color this often while the mouse rests; 0 to only change on a new area",
 		position = 9,
@@ -3048,6 +3140,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellKeepIconColors",
+		hidden = true,
 		name = "Keep icon colors on hover",
 		description = "Leave the icon out of the hover fill, so the fill only colors the slot background",
 		position = 10,
@@ -3060,6 +3153,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSlotBackground",
+		hidden = true,
 		name = "Slot background",
 		description = "Color the background of every slot; icons stay on top",
 		position = 11,
@@ -3073,6 +3167,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "spellSlotBackgroundColor",
+		hidden = true,
 		name = "Slot background color",
 		description = "Background color of the slots",
 		position = 12,
@@ -3087,6 +3182,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlight",
+		hidden = true,
 		name = "Spotlight",
 		description = "Light glow at the mouse that dims the panel outward, to show what is in reach",
 		position = 0,
@@ -3100,6 +3196,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 20, max = 2000)
 	@ConfigItem(
 		keyName = "spellSpotlightRadius",
+		hidden = true,
 		name = "Radius",
 		description = "Distance in pixels from the mouse where the dimming is full",
 		position = 1,
@@ -3113,6 +3210,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "spellSpotlightDim",
+		hidden = true,
 		name = "Dim color",
 		description = "Color at the edge of the spotlight and beyond",
 		position = 2,
@@ -3126,6 +3224,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "spellSpotlightGlow",
+		hidden = true,
 		name = "Glow color",
 		description = "Color of the glow at the mouse",
 		position = 3,
@@ -3140,6 +3239,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(max = 100)
 	@ConfigItem(
 		keyName = "spellSpotlightGlowSize",
+		hidden = true,
 		name = "Glow size",
 		description = "How far the glow reaches, as a share of the radius; 0 for no glow, so only the dimming shows",
 		position = 4,
@@ -3152,6 +3252,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlightShape",
+		hidden = true,
 		name = "Gradient",
 		description = "How the spotlight fades: Smooth evenly, Soft eased in and out, Sharp with a crisp edge,"
 			+ " or Banded in steps",
@@ -3165,6 +3266,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlightType",
+		hidden = true,
 		name = "Gradient type",
 		description = "The spotlight's shape, or a pattern in it. Shapes: circle, ellipse, square, diamond, star,"
 			+ " hexagon, cross, flower, and vertical or horizontal bands. Patterns on a circle: rings, a turning spiral,"
@@ -3179,6 +3281,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlightMotion",
+		hidden = true,
 		name = "Gradient motion",
 		description = "Move the spotlight's shape: Spin turns it slowly, Wobble ripples its edge. Uses the effect speed",
 		position = 7,
@@ -3191,6 +3294,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlightEffect",
+		hidden = true,
 		name = "Effect",
 		description = "An animation on the spotlight: Pulse breathes in and out, Ripples sends rings outward,"
 			+ " and Sparkles, Embers, Orbit and Snow add particles",
@@ -3204,6 +3308,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlightEffectColor",
+		hidden = true,
 		name = "Effect on",
 		description = "Where the effect shows. Overlay draws it on top within the spotlight radius and never changes"
 			+ " the spotlight itself. Glow, Gradient and Whole keep it to the glow near the mouse, the gradient past"
@@ -3218,6 +3323,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlightEffectReplace",
+		hidden = true,
 		name = "Replace with effect",
 		description = "Draw the Effect on area only as the effect, in the gradient's own colors, instead of a smooth"
 			+ " fill; with Gradient and Sparkles, the gradient is made of sparkles. Has no effect with Overlay",
@@ -3231,6 +3337,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlightEffectCustom",
+		hidden = true,
 		name = "Custom effect color",
 		description = "Use the effect color below. When off, each particle and ring takes the color the spotlight"
 			+ " draws under it, so it shades from the glow into the gradient and falloff as it moves",
@@ -3245,6 +3352,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "spellSpotlightEffectOverride",
+		hidden = true,
 		name = "Effect color",
 		description = "Color of the effect, used when Custom effect color is on",
 		position = 12,
@@ -3257,6 +3365,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlightEffectOnClick",
+		hidden = true,
 		name = "Effect on click",
 		description = "Play the effect as a short burst when you click, instead of all the time",
 		position = 13,
@@ -3269,6 +3378,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlightClickResult",
+		hidden = true,
 		name = "Click result colors",
 		description = "With Effect on click, color each burst by how the click went, using the three colors below",
 		position = 14,
@@ -3282,6 +3392,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "spellSpotlightClickSuccessColor",
+		hidden = true,
 		name = "Good click color",
 		description = "Burst color for a good click, one that did something, with Click result colors on",
 		position = 15,
@@ -3295,6 +3406,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "spellSpotlightClickMissColor",
+		hidden = true,
 		name = "Bad click color",
 		description = "Burst color for a bad click, one that hit nothing, with Click result colors on",
 		position = 16,
@@ -3308,6 +3420,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "spellSpotlightClickRefusedColor",
+		hidden = true,
 		name = "Refused click color",
 		description = "Burst color when the game refused the click, with Click result colors on",
 		position = 17,
@@ -3325,6 +3438,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Units(Units.MILLISECONDS)
 	@ConfigItem(
 		keyName = "spellSpotlightEffectLength",
+		hidden = true,
 		name = "Effect length",
 		description = "How long each click burst lasts with Effect on click, and each detached effect with Detach"
 			+ " from mouse",
@@ -3343,6 +3457,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Units(Units.PERCENT)
 	@ConfigItem(
 		keyName = "spellSpotlightEffectSpeed",
+		hidden = true,
 		name = "Effect speed",
 		description = "How fast the effect moves: 100% is normal, lower is slower, higher is faster",
 		position = 19,
@@ -3360,6 +3475,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Units(Units.PERCENT)
 	@ConfigItem(
 		keyName = "spellSpotlightEffectSize",
+		hidden = true,
 		name = "Effect size",
 		description = "How big the effect's particles, rings and trails are: 100% is normal",
 		position = 20,
@@ -3372,6 +3488,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlightEffectDetach",
+		hidden = true,
 		name = "Detach from mouse",
 		description = "Let each effect run on its own where it started: where you clicked with Effect on click, else"
 			+ " where the mouse entered the panel. Each runs for the effect length wherever the mouse goes, and new"
@@ -3386,6 +3503,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlightAlways",
+		hidden = true,
 		name = "When not hovered",
 		description = "Also spotlight this panel while the mouse is outside it",
 		position = 22,
@@ -3398,6 +3516,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlightDeadOnly",
+		hidden = true,
 		name = "Only dead areas",
 		description = "Only dim and light the dead areas, so slots keep their colors",
 		position = 23,
@@ -3410,6 +3529,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellSpotlightFalloff",
+		hidden = true,
 		name = "Falloff",
 		description = "Past the falloff start, run the spotlight gradient in reverse: the dim fades out, then the falloff color fades in by the falloff end",
 		position = 24,
@@ -3424,6 +3544,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 20, max = 4000)
 	@ConfigItem(
 		keyName = "spellSpotlightFalloffDistance",
+		hidden = true,
 		name = "Falloff start",
 		description = "Distance in pixels from the mouse where the dimming starts fading back out",
 		position = 25,
@@ -3437,6 +3558,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 20, max = 4000)
 	@ConfigItem(
 		keyName = "spellSpotlightFalloffEnd",
+		hidden = true,
 		name = "Falloff end",
 		description = "Distance in pixels from the mouse where the dimming is gone; kept past the falloff start",
 		position = 26,
@@ -3450,6 +3572,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "spellSpotlightFalloffColor",
+		hidden = true,
 		name = "Falloff color",
 		description = "Color the falloff turns into by the falloff end, mirroring the glow at the mouse; kept beyond it."
 			+ " Leave its alpha at 0 for the dimming to just fade out",
@@ -3467,6 +3590,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	)
 	@ConfigItem(
 		keyName = "spellSpotlightFalloffColorEnd",
+		hidden = true,
 		name = "Falloff color end",
 		description = "Distance in pixels from the mouse where the falloff color has faded back out, over the same"
 			+ " length it took to fade in. 0 keeps the falloff color out to the panel's edges",
@@ -3481,6 +3605,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "spellSpotlightFadeEndColor",
+		hidden = true,
 		name = "Fade end color",
 		description = "Color the falloff color blends into at the falloff color end, kept beyond it. Fully see-through"
 			+ " (the default) fades it out to nothing. Needs a falloff color end",
@@ -3496,6 +3621,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellMissDots",
+		hidden = true,
 		name = "Miss dots",
 		description = "Leave a small dot at every dead click, so you can see where your misses land",
 		position = 0,
@@ -3509,6 +3635,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Alpha
 	@ConfigItem(
 		keyName = "spellMissDotColor",
+		hidden = true,
 		name = "Color",
 		description = "Color of the miss dots",
 		position = 1,
@@ -3521,6 +3648,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellMissDotShape",
+		hidden = true,
 		name = "Shape",
 		description = "Shape of the miss dots",
 		position = 2,
@@ -3533,6 +3661,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "spellMissDotHollow",
+		hidden = true,
 		name = "Hollow",
 		description = "Draw the miss dots as outlines instead of filled shapes",
 		position = 2,
@@ -3546,6 +3675,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 2, max = 16)
 	@ConfigItem(
 		keyName = "spellMissDotSize",
+		hidden = true,
 		name = "Size",
 		description = "Size of the miss dots in pixels",
 		position = 3,
@@ -3560,6 +3690,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@Range(min = 1, max = 600)
 	@ConfigItem(
 		keyName = "spellMissDotDuration",
+		hidden = true,
 		name = "Duration",
 		description = "How long each miss dot stays; it fades over this time",
 		position = 4,
