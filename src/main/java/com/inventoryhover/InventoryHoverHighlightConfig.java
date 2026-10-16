@@ -1488,6 +1488,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "copySettings",
+		hidden = true,
 		name = "Export settings",
 		description = "Tick to export all Click Helpers settings to the clipboard as JSON, to share them."
 			+ " The box unticks itself",
@@ -1501,6 +1502,7 @@ public interface InventoryHoverHighlightConfig extends Config
 
 	@ConfigItem(
 		keyName = "pasteSettings",
+		hidden = true,
 		name = "Import settings",
 		description = "Tick to import Click Helpers settings JSON from the clipboard. The box unticks itself",
 		position = 1,
