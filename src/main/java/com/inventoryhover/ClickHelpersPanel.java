@@ -15,7 +15,9 @@ import java.awt.geom.Path2D;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -25,6 +27,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
@@ -53,6 +56,13 @@ class ClickHelpersPanel extends PluginPanel
 	private final JLabel shareStatus = new JLabel(" ");
 	private final JComboBox<String> loadoutBox = new JComboBox<>();
 	private final JLabel loadoutStatus = new JLabel(" ");
+	private final JLabel communityStatus = new JLabel(" ");
+	private final CommunityBrowser browser;
+	private final JTextField loadoutName = new JTextField();
+	private final JButton sectionsButton = new JButton();
+	private final JTextField publishName = new JTextField();
+	/** Sections to publish, or null for all of them. */
+	private Set<String> chosenSections;
 	private final JButton practiceButton = new JButton();
 	private final JLabel sessionLabel = new JLabel();
 	private final ProgressChart chart = new ProgressChart();
@@ -64,6 +74,7 @@ class ClickHelpersPanel extends PluginPanel
 		this.plugin = plugin;
 		this.configManager = configManager;
 		this.colorPickerManager = colorPickerManager;
+		this.browser = new CommunityBrowser(plugin, () -> plugin.communityProblem(false), this::refreshLoadouts);
 		setLayout(new BorderLayout());
 		setBorder(new EmptyBorder(8, 8, 8, 8));
 
@@ -85,33 +96,61 @@ class ClickHelpersPanel extends PluginPanel
 		settingsTab.add(left(shareStatus));
 
 		settingsTab.add(heading("Loadouts"));
-		JTextField loadoutName = new JTextField();
-		loadoutName.setToolTipText("Name to save the current settings under");
+		settingsTab.add(left(fieldLabel("Saved loadouts")));
+		loadoutBox.setToolTipText("Your saved loadouts; the one you last saved or loaded is picked");
+		settingsTab.add(left(loadoutBox));
+		JPanel loadoutButtons = new JPanel(new GridLayout(1, 2, 6, 0));
+		JButton load = new JButton("Load");
+		load.setToolTipText("Apply the picked loadout");
+		load.addActionListener(e ->
+			loadoutStatus.setText(wrap(plugin.loadouts().loadLoadout((String) loadoutBox.getSelectedItem()))));
+		JButton delete = new JButton("Delete");
+		delete.setToolTipText("Delete the picked loadout");
+		delete.addActionListener(e ->
+		{
+			String picked = (String) loadoutBox.getSelectedItem();
+			if (picked == null)
+			{
+				loadoutStatus.setText(wrap("Pick a loadout to delete."));
+				return;
+			}
+			int answer = JOptionPane.showConfirmDialog(this, "Delete the loadout " + picked + "?\nThis cannot be undone.",
+				"Delete loadout", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+			if (answer == JOptionPane.YES_OPTION)
+			{
+				loadoutStatus.setText(wrap(plugin.loadouts().deleteLoadout(picked)));
+				refreshLoadouts(null);
+			}
+		});
+		loadoutButtons.add(load);
+		loadoutButtons.add(delete);
+		settingsTab.add(left(loadoutButtons));
+
+		settingsTab.add(left(fieldLabel("Save current settings as")));
+		loadoutName.setToolTipText("Fills in with the picked loadout, so saving updates it; type a new name for a new loadout");
 		settingsTab.add(left(loadoutName));
-		JButton saveLoadout = new JButton("Save current settings");
+		JButton saveLoadout = new JButton("Save");
+		saveLoadout.setToolTipText("Save your current settings under this name, replacing a loadout with the same name");
 		saveLoadout.addActionListener(e ->
 		{
 			loadoutStatus.setText(wrap(plugin.loadouts().saveLoadout(loadoutName.getText())));
 			refreshLoadouts(loadoutName.getText().trim());
 		});
 		settingsTab.add(left(saveLoadout));
-		settingsTab.add(left(loadoutBox));
-		JPanel loadoutButtons = new JPanel(new GridLayout(1, 2, 6, 0));
-		JButton load = new JButton("Load");
-		load.addActionListener(e ->
-			loadoutStatus.setText(wrap(plugin.loadouts().loadLoadout((String) loadoutBox.getSelectedItem()))));
-		JButton delete = new JButton("Delete");
-		delete.addActionListener(e ->
-		{
-			loadoutStatus.setText(wrap(plugin.loadouts().deleteLoadout((String) loadoutBox.getSelectedItem())));
-			refreshLoadouts(null);
-		});
-		loadoutButtons.add(load);
-		loadoutButtons.add(delete);
-		settingsTab.add(left(loadoutButtons));
 		loadoutStatus.setFont(FontManager.getRunescapeSmallFont());
 		settingsTab.add(left(loadoutStatus));
-		refreshLoadouts(null);
+		loadoutBox.addActionListener(e ->
+		{
+			Object picked = loadoutBox.getSelectedItem();
+			if (picked != null)
+			{
+				loadoutName.setText((String) picked);
+				publishName.setText((String) picked);
+			}
+		});
+		refreshLoadouts(plugin.loadouts().currentLoadout());
+
+		buildCommunitySection(settingsTab);
 
 		settingsTab.add(heading("Feeling lucky"));
 		JButton randomize = new JButton("Randomize all settings");
@@ -212,7 +251,7 @@ class ClickHelpersPanel extends PluginPanel
 	}
 
 	/** Refills the loadout dropdown, selecting {@code select} when given. */
-	private void refreshLoadouts(String select)
+	void refreshLoadouts(String select)
 	{
 		loadoutBox.removeAllItems();
 		for (String name : plugin.loadouts().loadoutNames())
@@ -223,6 +262,9 @@ class ClickHelpersPanel extends PluginPanel
 		{
 			loadoutBox.setSelectedItem(select);
 		}
+		Object picked = loadoutBox.getSelectedItem();
+		loadoutName.setText(picked == null ? "" : (String) picked);
+		publishName.setText(picked == null ? "" : (String) picked);
 	}
 
 	private void set(String key, Object value)
@@ -287,6 +329,81 @@ class ClickHelpersPanel extends PluginPanel
 		settings.add(swatch);
 	}
 
+	/** Publishing the picked loadout and browsing loadouts shared by other players. */
+	private void buildCommunitySection(JPanel page)
+	{
+		page.add(heading("Community"));
+		communityStatus.setFont(FontManager.getRunescapeSmallFont());
+		JLabel about = new JLabel(wrap("Share your loadouts with other players under a made-up author name,"
+			+ " up to " + CommunityLoadouts.SLOTS + ". Publishing a name again replaces it."));
+		about.setFont(FontManager.getRunescapeSmallFont());
+		page.add(left(about));
+
+		page.add(left(fieldLabel("Publish as")));
+		publishName.setToolTipText("Name to publish the picked loadout under; fills in with the loadout's name");
+		page.add(left(publishName));
+		page.add(left(fieldLabel("Sections to publish")));
+		sectionsButton.setToolTipText("Pick which settings sections to publish");
+		sectionsButton.addActionListener(e -> chooseSections());
+		updateSectionsButton();
+		page.add(left(sectionsButton));
+
+		JPanel buttons = new JPanel(new GridLayout(1, 2, 6, 0));
+		JButton publish = new JButton("Publish");
+		publish.setToolTipText("Publish the picked loadout, as it was saved, under the name above");
+		publish.addActionListener(e ->
+		{
+			if (showProblem(true))
+			{
+				return;
+			}
+			String loadout = (String) loadoutBox.getSelectedItem();
+			if (loadout == null)
+			{
+				communityStatus.setText(wrap("Save a loadout first, then publish it."));
+				return;
+			}
+			String name = publishName.getText().trim().isEmpty() ? loadout : publishName.getText().trim();
+			publish.setEnabled(false);
+			communityStatus.setText(wrap("Publishing " + name + "..."));
+			plugin.community().publish(name, plugin.loadouts().onlySections(plugin.loadouts().loadoutJson(loadout), chosenSections),
+				result ->
+			{
+				publish.setEnabled(true);
+				communityStatus.setText(wrap(result.message));
+				if (result.clearName)
+				{
+					publishName.setText("");
+				}
+				browser.refreshIfOpen();
+			});
+		});
+		JButton browse = new JButton("Browse");
+		browse.setToolTipText("Search, sort and preview published loadouts in a window");
+		browse.addActionListener(e ->
+		{
+			if (!showProblem(false))
+			{
+				browser.open();
+			}
+		});
+		buttons.add(publish);
+		buttons.add(browse);
+		page.add(left(buttons));
+		page.add(left(communityStatus));
+	}
+
+	/** Shows why the community features cannot be used, if they cannot; returns whether it showed one. */
+	private boolean showProblem(boolean publishing)
+	{
+		String problem = plugin.communityProblem(publishing);
+		if (problem != null)
+		{
+			communityStatus.setText(wrap(problem));
+		}
+		return problem != null;
+	}
+
 	private static JPanel tabPage()
 	{
 		JPanel page = new JPanel();
@@ -315,6 +432,36 @@ class ClickHelpersPanel extends PluginPanel
 		label.setForeground(Color.WHITE);
 		label.setBorder(new EmptyBorder(8, 0, 4, 0));
 		return left(label);
+	}
+
+	/** Asks which settings sections to publish. */
+	private void chooseSections()
+	{
+		List<String> names = plugin.loadouts().sectionNames();
+		Set<String> picked = SectionPicker.pick(this, "Sections to publish",
+			"Publish only these sections. Loading the published loadout changes only these sections.",
+			names, chosenSections);
+		if (picked != null)
+		{
+			chosenSections = picked.size() == names.size() ? null : picked;
+			updateSectionsButton();
+		}
+	}
+
+	private void updateSectionsButton()
+	{
+		sectionsButton.setText(chosenSections == null ? "All sections"
+			: chosenSections.size() + (chosenSections.size() == 1 ? " section" : " sections"));
+	}
+
+	/** A small label above a field. */
+	private static JLabel fieldLabel(String text)
+	{
+		JLabel label = new JLabel(text);
+		label.setFont(FontManager.getRunescapeSmallFont());
+		label.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		label.setBorder(new EmptyBorder(6, 0, 2, 0));
+		return label;
 	}
 
 	private static JLabel legendLabel(String text, Color color)

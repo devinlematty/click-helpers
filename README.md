@@ -156,6 +156,32 @@ spotlight and miss dot settings are set per tab; see
 - **Import settings**: tick to import shared JSON settings from the clipboard
 - Each box unticks itself and the result shows in chat
 - **Side panel**: turns the Click Helpers side panel on or off
+- **Community loadouts**: off by default. Turns on the side panel's Community
+  tab, see below
+
+### Community loadouts
+
+The side panel's Community tab lists loadouts other players published, and
+publishes your current settings under a name. You never log in: the plugin
+makes up an author name for you, like "Swift Goblin 42", and each install can
+publish up to 10 loadouts. Publishing again with the same name replaces that
+loadout. You must be logged in to the game to publish, and names with bad
+words are refused and cleared.
+
+Loading a community loadout only changes Click Helpers settings, and never
+turns network features on.
+
+**What leaves your client.** Nothing until Community loadouts is on and you
+press a button. Then:
+
+- **Google Firebase** (firebaseio.com, googleapis.com): an anonymous sign-in,
+  and the loadouts you publish or delete (name, time and settings). Listing
+  loadouts downloads the published ones.
+- **jsDelivr** (cdn.jsdelivr.net): downloads a public list of blocked words,
+  once per session, to check loadout names. Nothing about you is sent.
+
+Both see your IP address, as with any web request. Your username and account
+are never sent. Setup and admin notes are in [`firebase/README.md`](firebase/README.md).
 
 ### Side panel
 

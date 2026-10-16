@@ -44,6 +44,70 @@ public interface InventoryHoverHighlightConfig extends Config
 		DIM
 	}
 
+	/** How the eat and drink delay outline shows the time left. */
+	enum DelayOutlineStyle
+	{
+		SOLID,
+		FADE,
+		TRACE
+	}
+
+	/** How the spotlight's fades change. */
+	enum SpotlightShape
+	{
+		SMOOTH,
+		SOFT,
+		SHARP,
+		BANDED
+	}
+
+	/** The spotlight's shape: how distance from the mouse is measured. */
+	enum SpotlightType
+	{
+		CIRCLE,
+		ELLIPSE,
+		SQUARE,
+		DIAMOND,
+		STAR,
+		HEXAGON,
+		CROSS,
+		FLOWER,
+		VERTICAL_BAND,
+		HORIZONTAL_BAND,
+		RINGS,
+		SPIRAL,
+		RADAR
+	}
+
+	/** How the spotlight's shape moves. */
+	enum SpotlightMotion
+	{
+		NONE,
+		SPIN,
+		WOBBLE
+	}
+
+	/** An animation on top of the spotlight. */
+	enum SpotlightEffect
+	{
+		NONE,
+		PULSE,
+		RIPPLES,
+		SPARKLES,
+		EMBERS,
+		ORBIT,
+		SNOW
+	}
+
+	/** Where in the spotlight the effect shows. */
+	enum EffectArea
+	{
+		OVERLAY,
+		GLOW,
+		GRADIENT,
+		WHOLE
+	}
+
 	enum TickCue
 	{
 		OFF,
@@ -309,6 +373,19 @@ public interface InventoryHoverHighlightConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "hideWhenEmpty",
+		name = "Off with empty inventory",
+		description = "Draw nothing while your inventory is empty, as if the plugin were off. Everything comes back as"
+			+ " soon as an item is in your inventory. Switch practice still shows",
+		position = -1,
+		section = areasSection
+	)
+	default boolean hideWhenEmpty()
+	{
+		return false;
+	}
+
+	@ConfigItem(
 		keyName = "onlyItems",
 		name = "Only slots with items",
 		description = "Skip empty inventory slots",
@@ -563,6 +640,22 @@ public interface InventoryHoverHighlightConfig extends Config
 	default int missOutlineDuration()
 	{
 		return 1500;
+	}
+
+	@Range(
+		min = 0,
+		max = 10
+	)
+	@ConfigItem(
+		keyName = "missOutlineWidth",
+		name = "Miss outline width",
+		description = "Line width of the miss outline in pixels; 0 makes it one thicker than the tab's hover outline",
+		position = 12,
+		section = missSection
+	)
+	default int missOutlineWidth()
+	{
+		return 0;
 	}
 
 
@@ -1162,6 +1255,60 @@ public interface InventoryHoverHighlightConfig extends Config
 		return new Color(0, 0, 0, 130);
 	}
 
+	@ConfigItem(
+		keyName = "cooldownOutline",
+		name = "Delay outline",
+		description = "Outline items that cannot be eaten or drunk yet. Works with or without the delay shading above",
+		position = 3,
+		section = delaySection
+	)
+	default boolean cooldownOutline()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "cooldownOutlineStyle",
+		name = "Delay outline style",
+		description = "Solid: a steady outline until the delay ends. Fade: the outline fades out as the delay runs out."
+			+ " Trace: the outline shrinks around the slot as the delay runs out",
+		position = 4,
+		section = delaySection
+	)
+	default DelayOutlineStyle cooldownOutlineStyle()
+	{
+		return DelayOutlineStyle.TRACE;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "cooldownOutlineColor",
+		name = "Delay outline color",
+		description = "Color of the delay outline",
+		position = 5,
+		section = delaySection
+	)
+	default Color cooldownOutlineColor()
+	{
+		return new Color(255, 140, 0, 220);
+	}
+
+	@Range(
+		min = 1,
+		max = 10
+	)
+	@ConfigItem(
+		keyName = "cooldownOutlineWidth",
+		name = "Delay outline width",
+		description = "Line width of the delay outline in pixels",
+		position = 6,
+		section = delaySection
+	)
+	default int cooldownOutlineWidth()
+	{
+		return 2;
+	}
+
 	// Spotlight
 
 
@@ -1396,6 +1543,20 @@ public interface InventoryHoverHighlightConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(
+		keyName = "communityLoadouts",
+		name = "Community loadouts",
+		description = "Browse and publish loadouts in the side panel's Community tab. When on, the panel"
+			+ " connects to Google Firebase to list and publish loadouts, and downloads a public word"
+			+ " list from jsdelivr.net to check names. Nothing is sent until you press a button",
+		position = 3,
+		section = shareSection
+	)
+	default boolean communityLoadouts()
+	{
+		return false;
+	}
+
 	// Tab settings
 
 	@ConfigItem(
@@ -1545,7 +1706,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@ConfigItem(
 		keyName = "invKeepIconColors",
 		name = "Keep icon colors on hover",
-		description = "Draw the icon again over the hover fill, so the fill only colors the slot background",
+		description = "Leave the icon out of the hover fill, so the fill only colors the slot background",
 		position = 10,
 		section = invHoverSection
 	)
@@ -1647,10 +1808,275 @@ public interface InventoryHoverHighlightConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "invSpotlightShape",
+		name = "Gradient",
+		description = "How the spotlight fades: Smooth evenly, Soft eased in and out, Sharp with a crisp edge,"
+			+ " or Banded in steps",
+		position = 5,
+		section = invSpotlightSection
+	)
+	default SpotlightShape invSpotlightShape()
+	{
+		return SpotlightShape.SMOOTH;
+	}
+
+	@ConfigItem(
+		keyName = "invSpotlightType",
+		name = "Gradient type",
+		description = "The spotlight's shape, or a pattern in it. Shapes: circle, ellipse, square, diamond, star,"
+			+ " hexagon, cross, flower, and vertical or horizontal bands. Patterns on a circle: rings, a turning spiral,"
+			+ " or a radar sweep. All of them carry on through the falloff",
+		position = 6,
+		section = invSpotlightSection
+	)
+	default SpotlightType invSpotlightType()
+	{
+		return SpotlightType.CIRCLE;
+	}
+
+	@ConfigItem(
+		keyName = "invSpotlightMotion",
+		name = "Gradient motion",
+		description = "Move the spotlight's shape: Spin turns it slowly, Wobble ripples its edge. Uses the effect speed",
+		position = 7,
+		section = invSpotlightSection
+	)
+	default SpotlightMotion invSpotlightMotion()
+	{
+		return SpotlightMotion.NONE;
+	}
+
+	@ConfigItem(
+		keyName = "invSpotlightEffect",
+		name = "Effect",
+		description = "An animation on the spotlight: Pulse breathes in and out, Ripples sends rings outward,"
+			+ " and Sparkles, Embers, Orbit and Snow add particles",
+		position = 8,
+		section = invSpotlightSection
+	)
+	default SpotlightEffect invSpotlightEffect()
+	{
+		return SpotlightEffect.NONE;
+	}
+
+	@ConfigItem(
+		keyName = "invSpotlightEffectColor",
+		name = "Effect on",
+		description = "Where the effect shows. Overlay draws it on top within the spotlight radius and never changes"
+			+ " the spotlight itself. Glow, Gradient and Whole keep it to the glow near the mouse, the gradient past"
+			+ " the glow's edge, or everything, and can replace that part with Replace with effect",
+		position = 9,
+		section = invSpotlightSection
+	)
+	default EffectArea invSpotlightEffectColor()
+	{
+		return EffectArea.OVERLAY;
+	}
+
+	@ConfigItem(
+		keyName = "invSpotlightEffectReplace",
+		name = "Replace with effect",
+		description = "Draw the Effect on area only as the effect, in the gradient's own colors, instead of a smooth"
+			+ " fill; with Gradient and Sparkles, the gradient is made of sparkles. Has no effect with Overlay",
+		position = 10,
+		section = invSpotlightSection
+	)
+	default boolean invSpotlightEffectReplace()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "invSpotlightEffectCustom",
+		name = "Custom effect color",
+		description = "Use the effect color below. When off, each particle and ring takes the color the spotlight"
+			+ " draws under it, so it shades from the glow into the gradient and falloff as it moves",
+		position = 11,
+		section = invSpotlightSection
+	)
+	default boolean invSpotlightEffectCustom()
+	{
+		return false;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "invSpotlightEffectOverride",
+		name = "Effect color",
+		description = "Color of the effect, used when Custom effect color is on",
+		position = 12,
+		section = invSpotlightSection
+	)
+	default Color invSpotlightEffectOverride()
+	{
+		return new Color(255, 255, 255, 200);
+	}
+
+	@ConfigItem(
+		keyName = "invSpotlightEffectOnClick",
+		name = "Effect on click",
+		description = "Play the effect as a short burst when you click, instead of all the time",
+		position = 13,
+		section = invSpotlightSection
+	)
+	default boolean invSpotlightEffectOnClick()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "invSpotlightClickResult",
+		name = "Click result colors",
+		description = "With Effect on click, color each burst by how the click went, using the three colors below",
+		position = 14,
+		section = invSpotlightSection
+	)
+	default boolean invSpotlightClickResult()
+	{
+		return false;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "invSpotlightClickSuccessColor",
+		name = "Good click color",
+		description = "Burst color for a good click, one that did something, with Click result colors on",
+		position = 15,
+		section = invSpotlightSection
+	)
+	default Color invSpotlightClickSuccessColor()
+	{
+		return new Color(0, 255, 0, 200);
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "invSpotlightClickMissColor",
+		name = "Bad click color",
+		description = "Burst color for a bad click, one that hit nothing, with Click result colors on",
+		position = 16,
+		section = invSpotlightSection
+	)
+	default Color invSpotlightClickMissColor()
+	{
+		return new Color(255, 60, 60, 200);
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "invSpotlightClickRefusedColor",
+		name = "Refused click color",
+		description = "Burst color when the game refused the click, with Click result colors on",
+		position = 17,
+		section = invSpotlightSection
+	)
+	default Color invSpotlightClickRefusedColor()
+	{
+		return new Color(255, 220, 0, 200);
+	}
+
+	@Range(
+		min = 100,
+		max = 10000
+	)
+	@Units(Units.MILLISECONDS)
+	@ConfigItem(
+		keyName = "invSpotlightEffectLength",
+		name = "Effect length",
+		description = "How long each click burst lasts with Effect on click, and each detached effect with Detach"
+			+ " from mouse",
+		position = 18,
+		section = invSpotlightSection
+	)
+	default int invSpotlightEffectLength()
+	{
+		return 1200;
+	}
+
+	@Range(
+		min = 10,
+		max = 500
+	)
+	@Units(Units.PERCENT)
+	@ConfigItem(
+		keyName = "invSpotlightEffectSpeed",
+		name = "Effect speed",
+		description = "How fast the effect moves: 100% is normal, lower is slower, higher is faster",
+		position = 19,
+		section = invSpotlightSection
+	)
+	default int invSpotlightEffectSpeed()
+	{
+		return 100;
+	}
+
+	@Range(
+		min = 25,
+		max = 400
+	)
+	@Units(Units.PERCENT)
+	@ConfigItem(
+		keyName = "invSpotlightEffectSize",
+		name = "Effect size",
+		description = "How big the effect's particles, rings and trails are: 100% is normal",
+		position = 20,
+		section = invSpotlightSection
+	)
+	default int invSpotlightEffectSize()
+	{
+		return 100;
+	}
+
+	@ConfigItem(
+		keyName = "invSpotlightEffectDetach",
+		name = "Detach from mouse",
+		description = "Let each effect run on its own where it started: where you clicked with Effect on click, else"
+			+ " where the mouse entered the panel. Each runs for the effect length wherever the mouse goes, and new"
+			+ " ones start alongside older ones",
+		position = 21,
+		section = invSpotlightSection
+	)
+	default boolean invSpotlightEffectDetach()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "invSpotlightClickAnywhere",
+		name = "Click effects anywhere",
+		description = "With Effect on click, clicks outside the inventory, prayer and spellbook panels, such as on the"
+			+ " game world, also play this effect where you clicked",
+		position = 22,
+		section = invSpotlightSection
+	)
+	default boolean invSpotlightClickAnywhere()
+	{
+		return false;
+	}
+
+	@Range(
+		min = 0,
+		max = 10000
+	)
+	@Units(Units.MILLISECONDS)
+	@ConfigItem(
+		keyName = "invSpotlightClickAnywhereDelay",
+		name = "Click anywhere delay",
+		description = "Shortest time between click effects outside the panels; clicks sooner than this play nothing."
+			+ " 0 plays one for every click",
+		position = 23,
+		section = invSpotlightSection
+	)
+	default int invSpotlightClickAnywhereDelay()
+	{
+		return 600;
+	}
+
+	@ConfigItem(
 		keyName = "invSpotlightAlways",
 		name = "When not hovered",
 		description = "Also spotlight this panel while the mouse is outside it",
-		position = 5,
+		position = 24,
 		section = invSpotlightSection
 	)
 	default boolean invSpotlightAlways()
@@ -1662,7 +2088,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "invSpotlightDeadOnly",
 		name = "Only dead areas",
 		description = "Only dim and light the dead areas, so slots keep their colors",
-		position = 6,
+		position = 25,
 		section = invSpotlightSection
 	)
 	default boolean invSpotlightDeadOnly()
@@ -1674,7 +2100,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "invSpotlightFalloff",
 		name = "Falloff",
 		description = "Past the falloff start, run the spotlight gradient in reverse: the dim fades out, then the falloff color fades in by the falloff end",
-		position = 7,
+		position = 26,
 		section = invSpotlightSection
 	)
 	default boolean invSpotlightFalloff()
@@ -1688,7 +2114,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "invSpotlightFalloffDistance",
 		name = "Falloff start",
 		description = "Distance in pixels from the mouse where the dimming starts fading back out",
-		position = 8,
+		position = 27,
 		section = invSpotlightSection
 	)
 	default int invSpotlightFalloffDistance()
@@ -1701,7 +2127,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "invSpotlightFalloffEnd",
 		name = "Falloff end",
 		description = "Distance in pixels from the mouse where the dimming is gone; kept past the falloff start",
-		position = 9,
+		position = 28,
 		section = invSpotlightSection
 	)
 	default int invSpotlightFalloffEnd()
@@ -1715,10 +2141,41 @@ public interface InventoryHoverHighlightConfig extends Config
 		name = "Falloff color",
 		description = "Color the falloff turns into by the falloff end, mirroring the glow at the mouse; kept beyond it."
 			+ " Leave its alpha at 0 for the dimming to just fade out",
-		position = 10,
+		position = 29,
 		section = invSpotlightSection
 	)
 	default Color invSpotlightFalloffColor()
+	{
+		return new Color(0, 0, 0, 0);
+	}
+
+	@Range(
+		min = 0,
+		max = 3000
+	)
+	@ConfigItem(
+		keyName = "invSpotlightFalloffColorEnd",
+		name = "Falloff color end",
+		description = "Distance in pixels from the mouse where the falloff color has faded back out, over the same"
+			+ " length it took to fade in. 0 keeps the falloff color out to the panel's edges",
+		position = 30,
+		section = invSpotlightSection
+	)
+	default int invSpotlightFalloffColorEnd()
+	{
+		return 0;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "invSpotlightFadeEndColor",
+		name = "Fade end color",
+		description = "Color the falloff color blends into at the falloff color end, kept beyond it. Fully see-through"
+			+ " (the default) fades it out to nothing. Needs a falloff color end",
+		position = 31,
+		section = invSpotlightSection
+	)
+	default Color invSpotlightFadeEndColor()
 	{
 		return new Color(0, 0, 0, 0);
 	}
@@ -1936,7 +2393,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@ConfigItem(
 		keyName = "prayerKeepIconColors",
 		name = "Keep icon colors on hover",
-		description = "Draw the icon again over the hover fill, so the fill only colors the slot background",
+		description = "Leave the icon out of the hover fill, so the fill only colors the slot background",
 		position = 10,
 		section = prayerHoverSection
 	)
@@ -2038,10 +2495,244 @@ public interface InventoryHoverHighlightConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "prayerSpotlightShape",
+		name = "Gradient",
+		description = "How the spotlight fades: Smooth evenly, Soft eased in and out, Sharp with a crisp edge,"
+			+ " or Banded in steps",
+		position = 5,
+		section = prayerSpotlightSection
+	)
+	default SpotlightShape prayerSpotlightShape()
+	{
+		return SpotlightShape.SMOOTH;
+	}
+
+	@ConfigItem(
+		keyName = "prayerSpotlightType",
+		name = "Gradient type",
+		description = "The spotlight's shape, or a pattern in it. Shapes: circle, ellipse, square, diamond, star,"
+			+ " hexagon, cross, flower, and vertical or horizontal bands. Patterns on a circle: rings, a turning spiral,"
+			+ " or a radar sweep. All of them carry on through the falloff",
+		position = 6,
+		section = prayerSpotlightSection
+	)
+	default SpotlightType prayerSpotlightType()
+	{
+		return SpotlightType.CIRCLE;
+	}
+
+	@ConfigItem(
+		keyName = "prayerSpotlightMotion",
+		name = "Gradient motion",
+		description = "Move the spotlight's shape: Spin turns it slowly, Wobble ripples its edge. Uses the effect speed",
+		position = 7,
+		section = prayerSpotlightSection
+	)
+	default SpotlightMotion prayerSpotlightMotion()
+	{
+		return SpotlightMotion.NONE;
+	}
+
+	@ConfigItem(
+		keyName = "prayerSpotlightEffect",
+		name = "Effect",
+		description = "An animation on the spotlight: Pulse breathes in and out, Ripples sends rings outward,"
+			+ " and Sparkles, Embers, Orbit and Snow add particles",
+		position = 8,
+		section = prayerSpotlightSection
+	)
+	default SpotlightEffect prayerSpotlightEffect()
+	{
+		return SpotlightEffect.NONE;
+	}
+
+	@ConfigItem(
+		keyName = "prayerSpotlightEffectColor",
+		name = "Effect on",
+		description = "Where the effect shows. Overlay draws it on top within the spotlight radius and never changes"
+			+ " the spotlight itself. Glow, Gradient and Whole keep it to the glow near the mouse, the gradient past"
+			+ " the glow's edge, or everything, and can replace that part with Replace with effect",
+		position = 9,
+		section = prayerSpotlightSection
+	)
+	default EffectArea prayerSpotlightEffectColor()
+	{
+		return EffectArea.OVERLAY;
+	}
+
+	@ConfigItem(
+		keyName = "prayerSpotlightEffectReplace",
+		name = "Replace with effect",
+		description = "Draw the Effect on area only as the effect, in the gradient's own colors, instead of a smooth"
+			+ " fill; with Gradient and Sparkles, the gradient is made of sparkles. Has no effect with Overlay",
+		position = 10,
+		section = prayerSpotlightSection
+	)
+	default boolean prayerSpotlightEffectReplace()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "prayerSpotlightEffectCustom",
+		name = "Custom effect color",
+		description = "Use the effect color below. When off, each particle and ring takes the color the spotlight"
+			+ " draws under it, so it shades from the glow into the gradient and falloff as it moves",
+		position = 11,
+		section = prayerSpotlightSection
+	)
+	default boolean prayerSpotlightEffectCustom()
+	{
+		return false;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "prayerSpotlightEffectOverride",
+		name = "Effect color",
+		description = "Color of the effect, used when Custom effect color is on",
+		position = 12,
+		section = prayerSpotlightSection
+	)
+	default Color prayerSpotlightEffectOverride()
+	{
+		return new Color(255, 255, 255, 200);
+	}
+
+	@ConfigItem(
+		keyName = "prayerSpotlightEffectOnClick",
+		name = "Effect on click",
+		description = "Play the effect as a short burst when you click, instead of all the time",
+		position = 13,
+		section = prayerSpotlightSection
+	)
+	default boolean prayerSpotlightEffectOnClick()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "prayerSpotlightClickResult",
+		name = "Click result colors",
+		description = "With Effect on click, color each burst by how the click went, using the three colors below",
+		position = 14,
+		section = prayerSpotlightSection
+	)
+	default boolean prayerSpotlightClickResult()
+	{
+		return false;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "prayerSpotlightClickSuccessColor",
+		name = "Good click color",
+		description = "Burst color for a good click, one that did something, with Click result colors on",
+		position = 15,
+		section = prayerSpotlightSection
+	)
+	default Color prayerSpotlightClickSuccessColor()
+	{
+		return new Color(0, 255, 0, 200);
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "prayerSpotlightClickMissColor",
+		name = "Bad click color",
+		description = "Burst color for a bad click, one that hit nothing, with Click result colors on",
+		position = 16,
+		section = prayerSpotlightSection
+	)
+	default Color prayerSpotlightClickMissColor()
+	{
+		return new Color(255, 60, 60, 200);
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "prayerSpotlightClickRefusedColor",
+		name = "Refused click color",
+		description = "Burst color when the game refused the click, with Click result colors on",
+		position = 17,
+		section = prayerSpotlightSection
+	)
+	default Color prayerSpotlightClickRefusedColor()
+	{
+		return new Color(255, 220, 0, 200);
+	}
+
+	@Range(
+		min = 100,
+		max = 10000
+	)
+	@Units(Units.MILLISECONDS)
+	@ConfigItem(
+		keyName = "prayerSpotlightEffectLength",
+		name = "Effect length",
+		description = "How long each click burst lasts with Effect on click, and each detached effect with Detach"
+			+ " from mouse",
+		position = 18,
+		section = prayerSpotlightSection
+	)
+	default int prayerSpotlightEffectLength()
+	{
+		return 1200;
+	}
+
+	@Range(
+		min = 10,
+		max = 500
+	)
+	@Units(Units.PERCENT)
+	@ConfigItem(
+		keyName = "prayerSpotlightEffectSpeed",
+		name = "Effect speed",
+		description = "How fast the effect moves: 100% is normal, lower is slower, higher is faster",
+		position = 19,
+		section = prayerSpotlightSection
+	)
+	default int prayerSpotlightEffectSpeed()
+	{
+		return 100;
+	}
+
+	@Range(
+		min = 25,
+		max = 400
+	)
+	@Units(Units.PERCENT)
+	@ConfigItem(
+		keyName = "prayerSpotlightEffectSize",
+		name = "Effect size",
+		description = "How big the effect's particles, rings and trails are: 100% is normal",
+		position = 20,
+		section = prayerSpotlightSection
+	)
+	default int prayerSpotlightEffectSize()
+	{
+		return 100;
+	}
+
+	@ConfigItem(
+		keyName = "prayerSpotlightEffectDetach",
+		name = "Detach from mouse",
+		description = "Let each effect run on its own where it started: where you clicked with Effect on click, else"
+			+ " where the mouse entered the panel. Each runs for the effect length wherever the mouse goes, and new"
+			+ " ones start alongside older ones",
+		position = 21,
+		section = prayerSpotlightSection
+	)
+	default boolean prayerSpotlightEffectDetach()
+	{
+		return false;
+	}
+
+	@ConfigItem(
 		keyName = "prayerSpotlightAlways",
 		name = "When not hovered",
 		description = "Also spotlight this panel while the mouse is outside it",
-		position = 5,
+		position = 22,
 		section = prayerSpotlightSection
 	)
 	default boolean prayerSpotlightAlways()
@@ -2053,7 +2744,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "prayerSpotlightDeadOnly",
 		name = "Only dead areas",
 		description = "Only dim and light the dead areas, so slots keep their colors",
-		position = 6,
+		position = 23,
 		section = prayerSpotlightSection
 	)
 	default boolean prayerSpotlightDeadOnly()
@@ -2065,7 +2756,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "prayerSpotlightFalloff",
 		name = "Falloff",
 		description = "Past the falloff start, run the spotlight gradient in reverse: the dim fades out, then the falloff color fades in by the falloff end",
-		position = 7,
+		position = 24,
 		section = prayerSpotlightSection
 	)
 	default boolean prayerSpotlightFalloff()
@@ -2079,7 +2770,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "prayerSpotlightFalloffDistance",
 		name = "Falloff start",
 		description = "Distance in pixels from the mouse where the dimming starts fading back out",
-		position = 8,
+		position = 25,
 		section = prayerSpotlightSection
 	)
 	default int prayerSpotlightFalloffDistance()
@@ -2092,7 +2783,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "prayerSpotlightFalloffEnd",
 		name = "Falloff end",
 		description = "Distance in pixels from the mouse where the dimming is gone; kept past the falloff start",
-		position = 9,
+		position = 26,
 		section = prayerSpotlightSection
 	)
 	default int prayerSpotlightFalloffEnd()
@@ -2106,10 +2797,41 @@ public interface InventoryHoverHighlightConfig extends Config
 		name = "Falloff color",
 		description = "Color the falloff turns into by the falloff end, mirroring the glow at the mouse; kept beyond it."
 			+ " Leave its alpha at 0 for the dimming to just fade out",
-		position = 10,
+		position = 27,
 		section = prayerSpotlightSection
 	)
 	default Color prayerSpotlightFalloffColor()
+	{
+		return new Color(0, 0, 0, 0);
+	}
+
+	@Range(
+		min = 0,
+		max = 3000
+	)
+	@ConfigItem(
+		keyName = "prayerSpotlightFalloffColorEnd",
+		name = "Falloff color end",
+		description = "Distance in pixels from the mouse where the falloff color has faded back out, over the same"
+			+ " length it took to fade in. 0 keeps the falloff color out to the panel's edges",
+		position = 28,
+		section = prayerSpotlightSection
+	)
+	default int prayerSpotlightFalloffColorEnd()
+	{
+		return 0;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "prayerSpotlightFadeEndColor",
+		name = "Fade end color",
+		description = "Color the falloff color blends into at the falloff color end, kept beyond it. Fully see-through"
+			+ " (the default) fades it out to nothing. Needs a falloff color end",
+		position = 29,
+		section = prayerSpotlightSection
+	)
+	default Color prayerSpotlightFadeEndColor()
 	{
 		return new Color(0, 0, 0, 0);
 	}
@@ -2327,7 +3049,7 @@ public interface InventoryHoverHighlightConfig extends Config
 	@ConfigItem(
 		keyName = "spellKeepIconColors",
 		name = "Keep icon colors on hover",
-		description = "Draw the icon again over the hover fill, so the fill only colors the slot background",
+		description = "Leave the icon out of the hover fill, so the fill only colors the slot background",
 		position = 10,
 		section = spellHoverSection
 	)
@@ -2429,10 +3151,244 @@ public interface InventoryHoverHighlightConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "spellSpotlightShape",
+		name = "Gradient",
+		description = "How the spotlight fades: Smooth evenly, Soft eased in and out, Sharp with a crisp edge,"
+			+ " or Banded in steps",
+		position = 5,
+		section = spellSpotlightSection
+	)
+	default SpotlightShape spellSpotlightShape()
+	{
+		return SpotlightShape.SMOOTH;
+	}
+
+	@ConfigItem(
+		keyName = "spellSpotlightType",
+		name = "Gradient type",
+		description = "The spotlight's shape, or a pattern in it. Shapes: circle, ellipse, square, diamond, star,"
+			+ " hexagon, cross, flower, and vertical or horizontal bands. Patterns on a circle: rings, a turning spiral,"
+			+ " or a radar sweep. All of them carry on through the falloff",
+		position = 6,
+		section = spellSpotlightSection
+	)
+	default SpotlightType spellSpotlightType()
+	{
+		return SpotlightType.CIRCLE;
+	}
+
+	@ConfigItem(
+		keyName = "spellSpotlightMotion",
+		name = "Gradient motion",
+		description = "Move the spotlight's shape: Spin turns it slowly, Wobble ripples its edge. Uses the effect speed",
+		position = 7,
+		section = spellSpotlightSection
+	)
+	default SpotlightMotion spellSpotlightMotion()
+	{
+		return SpotlightMotion.NONE;
+	}
+
+	@ConfigItem(
+		keyName = "spellSpotlightEffect",
+		name = "Effect",
+		description = "An animation on the spotlight: Pulse breathes in and out, Ripples sends rings outward,"
+			+ " and Sparkles, Embers, Orbit and Snow add particles",
+		position = 8,
+		section = spellSpotlightSection
+	)
+	default SpotlightEffect spellSpotlightEffect()
+	{
+		return SpotlightEffect.NONE;
+	}
+
+	@ConfigItem(
+		keyName = "spellSpotlightEffectColor",
+		name = "Effect on",
+		description = "Where the effect shows. Overlay draws it on top within the spotlight radius and never changes"
+			+ " the spotlight itself. Glow, Gradient and Whole keep it to the glow near the mouse, the gradient past"
+			+ " the glow's edge, or everything, and can replace that part with Replace with effect",
+		position = 9,
+		section = spellSpotlightSection
+	)
+	default EffectArea spellSpotlightEffectColor()
+	{
+		return EffectArea.OVERLAY;
+	}
+
+	@ConfigItem(
+		keyName = "spellSpotlightEffectReplace",
+		name = "Replace with effect",
+		description = "Draw the Effect on area only as the effect, in the gradient's own colors, instead of a smooth"
+			+ " fill; with Gradient and Sparkles, the gradient is made of sparkles. Has no effect with Overlay",
+		position = 10,
+		section = spellSpotlightSection
+	)
+	default boolean spellSpotlightEffectReplace()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "spellSpotlightEffectCustom",
+		name = "Custom effect color",
+		description = "Use the effect color below. When off, each particle and ring takes the color the spotlight"
+			+ " draws under it, so it shades from the glow into the gradient and falloff as it moves",
+		position = 11,
+		section = spellSpotlightSection
+	)
+	default boolean spellSpotlightEffectCustom()
+	{
+		return false;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "spellSpotlightEffectOverride",
+		name = "Effect color",
+		description = "Color of the effect, used when Custom effect color is on",
+		position = 12,
+		section = spellSpotlightSection
+	)
+	default Color spellSpotlightEffectOverride()
+	{
+		return new Color(255, 255, 255, 200);
+	}
+
+	@ConfigItem(
+		keyName = "spellSpotlightEffectOnClick",
+		name = "Effect on click",
+		description = "Play the effect as a short burst when you click, instead of all the time",
+		position = 13,
+		section = spellSpotlightSection
+	)
+	default boolean spellSpotlightEffectOnClick()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "spellSpotlightClickResult",
+		name = "Click result colors",
+		description = "With Effect on click, color each burst by how the click went, using the three colors below",
+		position = 14,
+		section = spellSpotlightSection
+	)
+	default boolean spellSpotlightClickResult()
+	{
+		return false;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "spellSpotlightClickSuccessColor",
+		name = "Good click color",
+		description = "Burst color for a good click, one that did something, with Click result colors on",
+		position = 15,
+		section = spellSpotlightSection
+	)
+	default Color spellSpotlightClickSuccessColor()
+	{
+		return new Color(0, 255, 0, 200);
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "spellSpotlightClickMissColor",
+		name = "Bad click color",
+		description = "Burst color for a bad click, one that hit nothing, with Click result colors on",
+		position = 16,
+		section = spellSpotlightSection
+	)
+	default Color spellSpotlightClickMissColor()
+	{
+		return new Color(255, 60, 60, 200);
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "spellSpotlightClickRefusedColor",
+		name = "Refused click color",
+		description = "Burst color when the game refused the click, with Click result colors on",
+		position = 17,
+		section = spellSpotlightSection
+	)
+	default Color spellSpotlightClickRefusedColor()
+	{
+		return new Color(255, 220, 0, 200);
+	}
+
+	@Range(
+		min = 100,
+		max = 10000
+	)
+	@Units(Units.MILLISECONDS)
+	@ConfigItem(
+		keyName = "spellSpotlightEffectLength",
+		name = "Effect length",
+		description = "How long each click burst lasts with Effect on click, and each detached effect with Detach"
+			+ " from mouse",
+		position = 18,
+		section = spellSpotlightSection
+	)
+	default int spellSpotlightEffectLength()
+	{
+		return 1200;
+	}
+
+	@Range(
+		min = 10,
+		max = 500
+	)
+	@Units(Units.PERCENT)
+	@ConfigItem(
+		keyName = "spellSpotlightEffectSpeed",
+		name = "Effect speed",
+		description = "How fast the effect moves: 100% is normal, lower is slower, higher is faster",
+		position = 19,
+		section = spellSpotlightSection
+	)
+	default int spellSpotlightEffectSpeed()
+	{
+		return 100;
+	}
+
+	@Range(
+		min = 25,
+		max = 400
+	)
+	@Units(Units.PERCENT)
+	@ConfigItem(
+		keyName = "spellSpotlightEffectSize",
+		name = "Effect size",
+		description = "How big the effect's particles, rings and trails are: 100% is normal",
+		position = 20,
+		section = spellSpotlightSection
+	)
+	default int spellSpotlightEffectSize()
+	{
+		return 100;
+	}
+
+	@ConfigItem(
+		keyName = "spellSpotlightEffectDetach",
+		name = "Detach from mouse",
+		description = "Let each effect run on its own where it started: where you clicked with Effect on click, else"
+			+ " where the mouse entered the panel. Each runs for the effect length wherever the mouse goes, and new"
+			+ " ones start alongside older ones",
+		position = 21,
+		section = spellSpotlightSection
+	)
+	default boolean spellSpotlightEffectDetach()
+	{
+		return false;
+	}
+
+	@ConfigItem(
 		keyName = "spellSpotlightAlways",
 		name = "When not hovered",
 		description = "Also spotlight this panel while the mouse is outside it",
-		position = 5,
+		position = 22,
 		section = spellSpotlightSection
 	)
 	default boolean spellSpotlightAlways()
@@ -2444,7 +3400,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "spellSpotlightDeadOnly",
 		name = "Only dead areas",
 		description = "Only dim and light the dead areas, so slots keep their colors",
-		position = 6,
+		position = 23,
 		section = spellSpotlightSection
 	)
 	default boolean spellSpotlightDeadOnly()
@@ -2456,7 +3412,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "spellSpotlightFalloff",
 		name = "Falloff",
 		description = "Past the falloff start, run the spotlight gradient in reverse: the dim fades out, then the falloff color fades in by the falloff end",
-		position = 7,
+		position = 24,
 		section = spellSpotlightSection
 	)
 	default boolean spellSpotlightFalloff()
@@ -2470,7 +3426,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "spellSpotlightFalloffDistance",
 		name = "Falloff start",
 		description = "Distance in pixels from the mouse where the dimming starts fading back out",
-		position = 8,
+		position = 25,
 		section = spellSpotlightSection
 	)
 	default int spellSpotlightFalloffDistance()
@@ -2483,7 +3439,7 @@ public interface InventoryHoverHighlightConfig extends Config
 		keyName = "spellSpotlightFalloffEnd",
 		name = "Falloff end",
 		description = "Distance in pixels from the mouse where the dimming is gone; kept past the falloff start",
-		position = 9,
+		position = 26,
 		section = spellSpotlightSection
 	)
 	default int spellSpotlightFalloffEnd()
@@ -2497,10 +3453,41 @@ public interface InventoryHoverHighlightConfig extends Config
 		name = "Falloff color",
 		description = "Color the falloff turns into by the falloff end, mirroring the glow at the mouse; kept beyond it."
 			+ " Leave its alpha at 0 for the dimming to just fade out",
-		position = 10,
+		position = 27,
 		section = spellSpotlightSection
 	)
 	default Color spellSpotlightFalloffColor()
+	{
+		return new Color(0, 0, 0, 0);
+	}
+
+	@Range(
+		min = 0,
+		max = 3000
+	)
+	@ConfigItem(
+		keyName = "spellSpotlightFalloffColorEnd",
+		name = "Falloff color end",
+		description = "Distance in pixels from the mouse where the falloff color has faded back out, over the same"
+			+ " length it took to fade in. 0 keeps the falloff color out to the panel's edges",
+		position = 28,
+		section = spellSpotlightSection
+	)
+	default int spellSpotlightFalloffColorEnd()
+	{
+		return 0;
+	}
+
+	@Alpha
+	@ConfigItem(
+		keyName = "spellSpotlightFadeEndColor",
+		name = "Fade end color",
+		description = "Color the falloff color blends into at the falloff color end, kept beyond it. Fully see-through"
+			+ " (the default) fades it out to nothing. Needs a falloff color end",
+		position = 29,
+		section = spellSpotlightSection
+	)
+	default Color spellSpotlightFadeEndColor()
 	{
 		return new Color(0, 0, 0, 0);
 	}

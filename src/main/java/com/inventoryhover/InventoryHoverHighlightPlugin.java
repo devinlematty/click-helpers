@@ -168,6 +168,16 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	 */
 	final Queue<long[]> mouseClicks = new ConcurrentLinkedQueue<>();
 
+	/** When the last left click happened, for effects that play on click; 0 before any click. */
+	volatile long lastClickNanos;
+
+	/** Where the last left click was, for click bursts that stay where you clicked. */
+	volatile int lastClickX;
+	volatile int lastClickY;
+
+	/** When the game last refused a click, for click result colors. */
+	volatile long lastRejectedNanos;
+
 	private final MouseAdapter mouseListener = new MouseAdapter()
 	{
 		@Override
@@ -176,7 +186,11 @@ public class InventoryHoverHighlightPlugin extends Plugin
 			net.runelite.api.Point mouse = client.getMouseCanvasPosition();
 			if (SwingUtilities.isLeftMouseButton(e) && !client.isMenuOpen() && mouse != null)
 			{
-				mouseClicks.add(new long[]{mouse.getX(), mouse.getY(), System.nanoTime()});
+				long now = System.nanoTime();
+				mouseClicks.add(new long[]{mouse.getX(), mouse.getY(), now});
+				lastClickX = mouse.getX();
+				lastClickY = mouse.getY();
+				lastClickNanos = now;
 			}
 			return e;
 		}
@@ -211,6 +225,12 @@ public class InventoryHoverHighlightPlugin extends Plugin
 
 	@Inject
 	private SettingsSharing settingsSharing;
+
+	@Inject
+	private CommunityLoadouts communityLoadouts;
+
+	@Inject
+	private ConfigPanelBridge configPanelBridge;
 
 	@Inject
 	private TabSettings tabSettings;
@@ -303,6 +323,8 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	protected void startUp()
 	{
 		overlayManager.add(overlay);
+		overlay.fillOverlays().forEach(overlayManager::add);
+		configPanelBridge.start();
 		mouseManager.registerMouseListener(mouseListener);
 		keyManager.registerKeyListener(hideItemsHotkey);
 		lastTickNanos = System.nanoTime();
@@ -341,6 +363,8 @@ public class InventoryHoverHighlightPlugin extends Plugin
 			restoreItems();
 		});
 		overlayManager.remove(overlay);
+		overlay.fillOverlays().forEach(overlayManager::remove);
+		configPanelBridge.stop();
 		mouseManager.unregisterMouseListener(mouseListener);
 		keyManager.unregisterKeyListener(hideItemsHotkey);
 		overlayManager.remove(chartOverlay);
@@ -537,6 +561,7 @@ public class InventoryHoverHighlightPlugin extends Plugin
 			if (blocked)
 			{
 				stats.add(ClickStats.Kind.REJECTED);
+				lastRejectedNanos = System.nanoTime();
 			}
 		}
 
@@ -580,6 +605,7 @@ public class InventoryHoverHighlightPlugin extends Plugin
 			if (message.contains(phrase))
 			{
 				stats.add(ClickStats.Kind.REJECTED);
+				lastRejectedNanos = System.nanoTime();
 				if (config.rejectedClickMarker())
 				{
 					rejectedClicks.add(new long[]{lastClick[0], lastClick[1], System.nanoTime()});
@@ -657,6 +683,30 @@ public class InventoryHoverHighlightPlugin extends Plugin
 	SettingsSharing loadouts()
 	{
 		return settingsSharing;
+	}
+
+	/** Publishes, lists and deletes community loadouts for the side panel. */
+	CommunityLoadouts community()
+	{
+		return communityLoadouts;
+	}
+
+	/** Why the Community tab cannot be used right now, or null when it can. */
+	String communityProblem(boolean publishing)
+	{
+		if (!CommunityLoadouts.isSetUp())
+		{
+			return "Community loadouts are not available in this version.";
+		}
+		if (!config.communityLoadouts())
+		{
+			return "Turn on Community loadouts in the plugin settings, under Import/export settings.";
+		}
+		if (publishing && client.getGameState() != GameState.LOGGED_IN)
+		{
+			return "Log in to the game to publish a loadout.";
+		}
+		return null;
 	}
 
 	/** Exports the settings to the clipboard; returns a message for the player. */

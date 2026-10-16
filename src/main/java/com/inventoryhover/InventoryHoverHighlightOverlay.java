@@ -12,6 +12,7 @@ import java.awt.RadialGradientPaint;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Shape;
+import java.awt.Stroke;
 import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
@@ -26,14 +27,20 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.Set;
 import javax.inject.Inject;
 import net.runelite.api.Client;
+import net.runelite.api.Item;
+import net.runelite.api.ItemContainer;
 import net.runelite.api.Point;
 import net.runelite.api.Prayer;
+import net.runelite.api.SpritePixels;
 import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetType;
 import net.runelite.client.game.ItemManager;
@@ -151,6 +158,9 @@ class InventoryHoverHighlightOverlay extends Overlay
 	/** Clicks that did nothing, as {x, y, nanoTime}. */
 	private final List<long[]> deadClicks = new ArrayList<>();
 
+	/** Click time of the last click that hit nothing, for click result colors. */
+	private long lastMissNanos;
+
 	/**
 	 * A dead click kept as a small dot, stored relative to the panel it landed
 	 * in. Dots only show while their own panel is open, so switching between the
@@ -176,6 +186,16 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 	/** Panels of the frame being drawn. */
 	private List<Panel> framePanels = new ArrayList<>();
+
+	/** Sprites by id, for their offset and full size, which the cached sprite images drop. */
+	private final Map<Integer, SpritePixels> sprites = new HashMap<>();
+
+	/** Fill passes, one per panel, drawn right after the game draws that panel's interface. */
+	private final List<Overlay> fillOverlays = List.of(
+		new FillOverlay(InterfaceID.INVENTORY, PanelKind.INVENTORY),
+		new FillOverlay(InterfaceID.BANKSIDE, PanelKind.BANK),
+		new FillOverlay(InterfaceID.PRAYERBOOK, PanelKind.PRAYERS),
+		new FillOverlay(InterfaceID.MAGIC_SPELLBOOK, PanelKind.SPELLS));
 
 	/** Practice targets clicked recently, glowing in the hit color. */
 	private final List<Mark> practiceHits = new ArrayList<>();
@@ -211,11 +231,117 @@ class InventoryHoverHighlightOverlay extends Overlay
 		this.tabs = tabs;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_WIDGETS);
+		// Lower priorities draw first, so other plugins' overlays on the same panels, like rune counts on spells, stay on top
+		setPriority(PRIORITY_LOW - 1);
+	}
+
+	/** Whether to draw nothing because the inventory is empty and that setting is on; never during switch practice. */
+	private boolean pausedForEmptyInventory()
+	{
+		if (!config.hideWhenEmpty() || plugin.practice.isActive())
+		{
+			return false;
+		}
+		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
+		if (inventory == null)
+		{
+			return true;
+		}
+		for (Item item : inventory.getItems())
+		{
+			if (item.getId() > 0 && item.getQuantity() > 0)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** The fill pass overlays, added and removed with this overlay. */
+	List<Overlay> fillOverlays()
+	{
+		return fillOverlays;
+	}
+
+	/**
+	 * Draws the slot backgrounds and hover fills of one panel right after the
+	 * game draws its interface. Item overlays from other plugins, such as item
+	 * charges, draw after the same interface at a higher priority, so their text
+	 * stays on top of the fills.
+	 */
+	private class FillOverlay extends Overlay
+	{
+		private final PanelKind kind;
+
+		FillOverlay(int interfaceId, PanelKind kind)
+		{
+			this.kind = kind;
+			setPosition(OverlayPosition.DYNAMIC);
+			setLayer(OverlayLayer.MANUAL);
+			// Item overlays use PRIORITY_LOW, and lower priorities draw first
+			setPriority(PRIORITY_LOW - 1);
+			drawAfterInterface(interfaceId);
+		}
+
+		@Override
+		public Dimension render(Graphics2D graphics)
+		{
+			renderFills(graphics, kind);
+			return null;
+		}
+	}
+
+	/**
+	 * Draws the fills of one panel from the hover state of the last frame. The
+	 * main pass runs after every interface, so it is always one frame ahead.
+	 */
+	private void renderFills(Graphics2D graphics, PanelKind kind)
+	{
+		if (pausedForEmptyInventory())
+		{
+			return;
+		}
+		Panel panel = panelOf(framePanels, kind);
+		if (panel == null)
+		{
+			return;
+		}
+
+		graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		long now = System.nanoTime();
+		double phase = tickPhase(now);
+		List<Panel> panels = List.of(panel);
+
+		// The game's tooltips and filter menus are part of the same interface, so keep the fills off them
+		Area popups = collectPopups();
+		Shape originalClip = graphics.getClip();
+		if (!popups.isEmpty())
+		{
+			Area clip = new Area(originalClip != null ? originalClip
+				: new Rectangle(0, 0, client.getCanvasWidth(), client.getCanvasHeight()));
+			clip.subtract(popups);
+			graphics.setClip(clip);
+		}
+
+		drawSlotBackgrounds(graphics, panels);
+		drawPrayerBookCue(graphics, panels, lastTarget, phase, true);
+		drawTrails(graphics, panels, phase, now, true);
+		if (lastTarget != null && lastKind == kind)
+		{
+			drawHighlight(graphics, lastTarget, phase, lastTickCue, false, panel, true);
+		}
+		graphics.setClip(originalClip);
 	}
 
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
+		if (pausedForEmptyInventory())
+		{
+			// Drop clicks made meanwhile, so nothing replays when an item comes back
+			plugin.mouseClicks.clear();
+			return null;
+		}
 		graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		long now = System.nanoTime();
 
@@ -256,7 +382,6 @@ class InventoryHoverHighlightOverlay extends Overlay
 		updateDisco(target, panel, now);
 
 		drawDeadAreas(graphics, panels, panel);
-		drawSlotBackgrounds(graphics, panels);
 		drawSpotlights(graphics, panels, panel, mouse);
 		drawHiddenItems(graphics, panels);
 		drawCooldowns(graphics, panels, now);
@@ -267,13 +392,13 @@ class InventoryHoverHighlightOverlay extends Overlay
 		drawFlashes(graphics, now);
 
 		double phase = tickPhase(now);
-		drawPrayerBookCue(graphics, panels, target, phase);
+		drawPrayerBookCue(graphics, panels, target, phase, false);
 		updateTrails(target, panel, now);
-		drawTrails(graphics, panels, phase, now);
+		drawTrails(graphics, panels, phase, now, false);
 
 		if (target != null)
 		{
-			drawHighlight(graphics, target, phase, panel.tickCue, false, panel);
+			drawHighlight(graphics, target, phase, panel.tickCue, false, panel, false);
 		}
 
 		drawQueuedClicks(graphics);
@@ -666,10 +791,12 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 	/**
 	 * Draws the hover highlight. With {@code cueOnly}, draws only the tick cue,
-	 * for prayers that are not hovered.
+	 * for prayers that are not hovered. With {@code fills}, draws only the fills,
+	 * which the fill pass draws before other plugins' item overlays; otherwise
+	 * draws everything but the fills.
 	 */
 	private void drawHighlight(Graphics2D graphics, Rectangle bounds, double phase, boolean useTickCue, boolean cueOnly,
-		Panel panel)
+		Panel panel, boolean fills)
 	{
 		// Every cue mode restarts at the cue position: 0 at the cue point, 1 just before the next
 		double cycle = phase - config.pulsePosition() / 100.0;
@@ -681,27 +808,10 @@ class InventoryHoverHighlightOverlay extends Overlay
 			? config.tickCue()
 			: InventoryHoverHighlightConfig.TickCue.OFF;
 
-		if (!cueOnly && style != InventoryHoverHighlightConfig.HighlightStyle.OUTLINE)
+		if (fills)
 		{
-			graphics.setColor(hoverColor(tab.fillColor, tab));
-			graphics.fill(fillShape(bounds, tab.cornerRadius));
-		}
-
-		if (cue == InventoryHoverHighlightConfig.TickCue.PULSE)
-		{
-			if (cycle < PULSE_LENGTH)
-			{
-				Color pulse = config.pulseColor();
-				double strength = 1 - cycle / PULSE_LENGTH;
-				graphics.setColor(withAlpha(pulse, (int) (pulse.getAlpha() * strength)));
-				graphics.fill(fillShape(bounds, tab.cornerRadius));
-			}
-		}
-
-		// Keep the icon's own colors by drawing it again over the fill
-		if (!cueOnly && panel != null && tab.keepIconColors)
-		{
-			drawIcon(graphics, panel, bounds);
+			drawHighlightFills(graphics, bounds, cycle, cue, cueOnly, panel, tab);
+			return;
 		}
 
 		// Drain and Color are drawn on the outline, so they force it on even in fill-only style
@@ -744,6 +854,30 @@ class InventoryHoverHighlightOverlay extends Overlay
 		}
 	}
 
+	/** The hover fill and pulse cue of a highlight. */
+	private void drawHighlightFills(Graphics2D graphics, Rectangle bounds, double cycle,
+		InventoryHoverHighlightConfig.TickCue cue, boolean cueOnly, Panel panel, TabSettings.Tab tab)
+	{
+		// Keep the icon's own colors by leaving its pixels out of the fill
+		Panel iconPanel = !cueOnly && tab.keepIconColors ? panel : null;
+		if (!cueOnly && tab.style != InventoryHoverHighlightConfig.HighlightStyle.OUTLINE)
+		{
+			fillAroundIcon(graphics, iconPanel, bounds, fillShape(bounds, tab.cornerRadius),
+				hoverColor(tab.fillColor, tab));
+		}
+
+		if (cue == InventoryHoverHighlightConfig.TickCue.PULSE)
+		{
+			if (cycle < PULSE_LENGTH)
+			{
+				Color pulse = config.pulseColor();
+				double strength = 1 - cycle / PULSE_LENGTH;
+				fillAroundIcon(graphics, iconPanel, bounds, fillShape(bounds, tab.cornerRadius),
+					withAlpha(pulse, (int) (pulse.getAlpha() * strength)));
+			}
+		}
+	}
+
 	/** A hover color, swapped for the disco color in disco mode with the same alpha. */
 	private Color hoverColor(Color color, TabSettings.Tab tab)
 	{
@@ -751,7 +885,8 @@ class InventoryHoverHighlightOverlay extends Overlay
 	}
 
 	/** Tick cue on the listed prayers that are not hovered. */
-	private void drawPrayerBookCue(Graphics2D graphics, List<Panel> panels, Rectangle target, double phase)
+	private void drawPrayerBookCue(Graphics2D graphics, List<Panel> panels, Rectangle target, double phase,
+		boolean fills)
 	{
 		if (!config.tickCueAllPrayers() || config.tickCue() == InventoryHoverHighlightConfig.TickCue.OFF
 			|| plugin.cuePrayers.isEmpty() || panels.stream().noneMatch(p -> p.kind == PanelKind.PRAYERS))
@@ -772,7 +907,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 			String name = Text.removeTags(widget.getName());
 			if (!bounds.equals(target) && plugin.cuePrayers.stream().anyMatch(p -> WildcardMatcher.matches(p, name)))
 			{
-				drawHighlight(graphics, bounds, phase, true, true, prayers);
+				drawHighlight(graphics, bounds, phase, true, true, prayers, fills);
 			}
 		}
 	}
@@ -800,7 +935,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 	}
 
 	/** Draws recently hovered areas, including their tick cue, fading out. */
-	private void drawTrails(Graphics2D graphics, List<Panel> panels, double phase, long now)
+	private void drawTrails(Graphics2D graphics, List<Panel> panels, double phase, long now, boolean fills)
 	{
 		Composite original = graphics.getComposite();
 		for (Iterator<Mark> it = trails.iterator(); it.hasNext(); )
@@ -816,8 +951,12 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 			float strength = 1f - (float) age / duration;
 			graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, strength));
-			drawHighlight(graphics, trail.bounds, phase, trail.tickCue, false,
-				trail.kind == null ? null : panelOf(panels, trail.kind));
+			Panel panel = trail.kind == null ? null : panelOf(panels, trail.kind);
+			if (fills && panel == null)
+			{
+				continue;
+			}
+			drawHighlight(graphics, trail.bounds, phase, trail.tickCue, false, panel, fills);
 		}
 		graphics.setComposite(original);
 	}
@@ -857,6 +996,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 				plugin.stats.add(ClickStats.Kind.MISSED);
 			}
 
+			lastMissNanos = click[2];
 			if (config.deadClickMarker())
 			{
 				deadClicks.add(click);
@@ -1026,7 +1166,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 			double strength = 1 - (double) age / duration;
 			graphics.setColor(withAlpha(color, (int) (color.getAlpha() * strength)));
-			int width = tabOf(mark.kind).outlineWidth + 1;
+			int width = config.missOutlineWidth() > 0 ? config.missOutlineWidth() : tabOf(mark.kind).outlineWidth + 1;
 			graphics.setStroke(new BasicStroke(width));
 			graphics.draw(outlineShape(mark.bounds, width));
 		}
@@ -1193,24 +1333,470 @@ class InventoryHoverHighlightOverlay extends Overlay
 	/** Glow at the mouse that dims the hovered panel, or every panel, outward. */
 	private void drawSpotlights(Graphics2D graphics, List<Panel> panels, Panel hovered, Point mouse)
 	{
-		if (mouse == null || mouse.getX() < 0 || mouse.getY() < 0)
-		{
-			return;
-		}
-
+		boolean mouseOk = mouse != null && mouse.getX() >= 0 && mouse.getY() >= 0;
 		Paint original = graphics.getPaint();
 		for (Panel panel : panels)
 		{
 			TabSettings.Tab tab = tabs.get(panel.tab);
-			if (!tab.spotlight || (panel != hovered && !tab.spotlightAlways))
+			if (!tab.spotlight)
 			{
+				bursts.remove(panel.kind.name());
 				continue;
 			}
 
-			graphics.setPaint(spotlightPaint(tab, mouse));
-			graphics.fill(tab.spotlightDeadOnly ? deadArea(panel) : panel.area);
+			boolean shown = mouseOk && (panel == hovered || tab.spotlightAlways);
+			List<Burst> running = updateBursts(tab, panel, hovered, mouse, mouseOk);
+			Shape area = tab.spotlightDeadOnly ? deadArea(panel) : panel.area;
+			double strength = effectStrength(tab);
+			Spot spot = spotlight(tab, strength);
+			if (shown)
+			{
+				graphics.setPaint(spotPaint(tab, spot, mouse));
+				if (replacesFill(tab, strength))
+				{
+					Area rest = new Area(area);
+					rest.subtract(bandShape(effectBand(tab, mouse, area), mouse));
+					graphics.fill(rest);
+				}
+				else
+				{
+					graphics.fill(area);
+				}
+			}
+
+			if (!tab.spotlightEffectDetach)
+			{
+				if (shown && strength > 0)
+				{
+					Color result = tab.spotlightEffectOnClick && tab.spotlightClickResult ? clickResultColor(tab) : null;
+					drawSpotlightEffect(graphics, tab, mouse, mouse, area, spot, strength, effectSeconds(tab), result);
+				}
+				continue;
+			}
+
+			// Detached effects each keep running where they started, even with the mouse elsewhere
+			long now = System.nanoTime();
+			double length = Math.max(100, tab.spotlightEffectLength) / 1000.0;
+			double speed = Math.max(10, tab.spotlightEffectSpeed) / 100.0;
+			for (Burst burst : running)
+			{
+				double age = (now - burst.start) / 1e9;
+				double burstStrength = 1 - Math.pow(Math.min(1, age / length), 3);
+				Color result = tab.spotlightEffectOnClick && tab.spotlightClickResult ? burstResultColor(tab, burst) : null;
+				drawSpotlightEffect(graphics, tab, mouseOk ? mouse : burst.at, burst.at, area, spot, burstStrength,
+					age * speed, result);
+			}
 		}
+		drawClicksAnywhere(graphics, panels);
 		graphics.setPaint(original);
+	}
+
+	/** The spotlight's paint: a radial gradient for a circle, else the shaped spotlight paint. */
+	private static Paint spotPaint(TabSettings.Tab tab, Spot spot, Point mouse)
+	{
+		if (!SpotlightPaint.needsPaint(tab.spotlightType, tab.spotlightMotion))
+		{
+			return gradient(new Point2D.Float(mouse.getX(), mouse.getY()), spot.radius, spot.stops, spot.colors);
+		}
+		return new SpotlightPaint(tab.spotlightType, tab.spotlightMotion, shapeSeconds(tab), mouse.getX(), mouse.getY(),
+			spot.radius, spot.stops, spot.colors);
+	}
+
+	/** A running clock for the spotlight's motion and patterns, at the effect speed. */
+	private static double shapeSeconds(TabSettings.Tab tab)
+	{
+		return System.nanoTime() / 1e9 * Math.max(10, tab.spotlightEffectSpeed) / 100.0;
+	}
+
+	/** Click bursts outside every panel, from the inventory's effect settings. */
+	private final List<Burst> worldBursts = new ArrayList<>();
+	private long worldClickSeen;
+	private long lastWorldBurst;
+
+	private void drawClicksAnywhere(Graphics2D graphics, List<Panel> panels)
+	{
+		TabSettings.Tab tab = tabs.get(TabSettings.INVENTORY);
+		if (!tab.spotlight || !tab.spotlightClickAnywhere || !tab.spotlightEffectOnClick || tab.spotlightEffect == null
+			|| tab.spotlightEffect == InventoryHoverHighlightConfig.SpotlightEffect.NONE)
+		{
+			worldBursts.clear();
+			return;
+		}
+
+		long click = plugin.lastClickNanos;
+		if (click != 0 && click != worldClickSeen)
+		{
+			worldClickSeen = click;
+			int x = plugin.lastClickX;
+			int y = plugin.lastClickY;
+			long delay = Math.max(0, tab.spotlightClickAnywhereDelay) * 1_000_000L;
+			// Measured from the last burst that played, even if it has already ended
+			boolean rested = lastWorldBurst == 0 || click - lastWorldBurst >= delay;
+			if (rested && panels.stream().noneMatch(p -> p.area.contains(x, y)))
+			{
+				lastWorldBurst = click;
+				worldBursts.forEach(b -> b.settled = b.settled != null ? b.settled : burstResultColor(tab, b));
+				worldBursts.add(new Burst(new Point(x, y), click));
+			}
+		}
+
+		long now = System.nanoTime();
+		long lengthNanos = Math.max(100, tab.spotlightEffectLength) * 1_000_000L;
+		worldBursts.removeIf(b -> now - b.start >= lengthNanos);
+		if (worldBursts.isEmpty())
+		{
+			return;
+		}
+
+		Shape screen = new Rectangle(0, 0, client.getCanvasWidth(), client.getCanvasHeight());
+		double length = lengthNanos / 1e9;
+		double speed = Math.max(10, tab.spotlightEffectSpeed) / 100.0;
+		for (Burst burst : worldBursts)
+		{
+			double age = (now - burst.start) / 1e9;
+			double strength = 1 - Math.pow(Math.min(1, age / length), 3);
+			Spot spot = spotlight(tab, strength);
+			Color result = tab.spotlightClickResult ? burstResultColor(tab, burst) : null;
+			// Centered on the click, so gradient colors and areas are measured from there
+			drawSpotlightEffect(graphics, tab, burst.at, burst.at, screen, spot, strength, age * speed, result);
+		}
+	}
+
+	/** A detached effect: where and when it started, and its click's color once it is known for sure. */
+	private static class Burst
+	{
+		final Point at;
+		final long start;
+		Color settled;
+
+		Burst(Point at, long start)
+		{
+			this.at = at;
+			this.start = start;
+		}
+	}
+
+	/** Each tab's running detached effects, oldest first. */
+	private final Map<String, List<Burst>> bursts = new HashMap<>();
+	private final Set<String> hoveredTabs = new HashSet<>();
+	private final Map<String, Long> burstClicks = new HashMap<>();
+
+	/**
+	 * Starts and ends a tab's detached effects: a new one at each click inside
+	 * the panel with Effect on click, else each time the mouse enters the panel.
+	 * Each lasts the effect length; returns the running ones.
+	 */
+	private List<Burst> updateBursts(TabSettings.Tab tab, Panel panel, Panel hovered, Point mouse, boolean mouseOk)
+	{
+		// By panel, since the bank's inventory shares the inventory's tab settings
+		String key = panel.kind.name();
+		List<Burst> list = bursts.computeIfAbsent(key, k -> new ArrayList<>());
+		if (!tab.spotlightEffectDetach || tab.spotlightEffect == null
+			|| tab.spotlightEffect == InventoryHoverHighlightConfig.SpotlightEffect.NONE)
+		{
+			list.clear();
+			hoveredTabs.remove(key);
+			return list;
+		}
+
+		long now = System.nanoTime();
+		if (tab.spotlightEffectOnClick)
+		{
+			long click = plugin.lastClickNanos;
+			Long seen = burstClicks.get(key);
+			if (click != 0 && (seen == null || seen != click))
+			{
+				burstClicks.put(key, click);
+				if (panel.area.contains(plugin.lastClickX, plugin.lastClickY))
+				{
+					// The earlier bursts' clicks are settled now that a newer click came
+					list.forEach(b -> b.settled = b.settled != null ? b.settled : burstResultColor(tab, b));
+					list.add(new Burst(new Point(plugin.lastClickX, plugin.lastClickY), click));
+				}
+			}
+		}
+		else
+		{
+			boolean inside = mouseOk && panel == hovered;
+			if (inside && !hoveredTabs.contains(key))
+			{
+				list.add(new Burst(mouse, now));
+			}
+			if (inside)
+			{
+				hoveredTabs.add(key);
+			}
+			else
+			{
+				hoveredTabs.remove(key);
+			}
+		}
+
+		long length = Math.max(100, tab.spotlightEffectLength) * 1_000_000L;
+		list.removeIf(b -> now - b.start >= length);
+		return list;
+	}
+
+	/** A burst's click color: settled once a newer click came, else from the latest click's result. */
+	private Color burstResultColor(TabSettings.Tab tab, Burst burst)
+	{
+		if (burst.settled != null)
+		{
+			return burst.settled;
+		}
+		if (burst.start == plugin.lastClickNanos)
+		{
+			return clickResultColor(tab);
+		}
+		return lastMissNanos == burst.start ? tab.spotlightClickMissColor : tab.spotlightClickSuccessColor;
+	}
+
+
+
+	private static final int PARTICLES = 14;
+
+	/** The animated part of a spotlight effect, inside the spotlight's area. */
+	private void drawSpotlightEffect(Graphics2D graphics, TabSettings.Tab tab, Point mouse, Point origin, Shape area,
+		Spot spot, double strength, double seconds, Color result)
+	{
+		InventoryHoverHighlightConfig.SpotlightEffect effect = tab.spotlightEffect;
+		if (effect == InventoryHoverHighlightConfig.SpotlightEffect.PULSE)
+		{
+			return;
+		}
+
+		Shape originalClip = graphics.getClip();
+		graphics.clip(area);
+		float[] bandRadii = effectBand(tab, mouse, area);
+		float inner = bandRadii[0];
+		float outer = bandRadii[1];
+		boolean detached = tab.spotlightEffectDetach;
+		if (!detached)
+		{
+			graphics.clip(bandShape(bandRadii, mouse));
+		}
+
+		// Replacing a fill takes more particles, in the gradient's colors, so the area still reads
+		boolean replacing = replacesFill(tab, strength);
+		// Keep about the same density when the band reaches past the spotlight, such as out to the falloff color
+		float reach = Math.min(3f, outer / Math.max(1f, tab.spotlightRadius));
+		int particles = (int) ((replacing ? PARTICLES * 3 : PARTICLES) * Math.max(1f, reach * reach));
+		// Effects are laid out over the band's outer radius, and kept to the band by the clip
+		float radius = outer;
+		float cx = mouse.getX();
+		float cy = mouse.getY();
+		// The effect plays out around this point: the mouse, or where a detached effect started
+		float clickX = origin.getX();
+		float clickY = origin.getY();
+		float scale = Math.max(25, tab.spotlightEffectSize) / 100f;
+		// A set color wins: the click color during click bursts, then the effect color
+		Color override = result != null ? result : tab.spotlightEffectOverride;
+		// The glow color is made easier to see than the glow itself; every color fades out with a click burst
+		Color glow = tab.spotlightGlow;
+		Color color = override != null
+			? withAlpha(override, (int) (override.getAlpha() * strength))
+			: withAlpha(glow, (int) (Math.max(glow.getAlpha(), 150) * strength));
+		// Without a set color, every particle takes what the spotlight draws under it
+		boolean fromGradient = override == null;
+
+		switch (effect)
+		{
+			case RIPPLES:
+				graphics.setStroke(new BasicStroke(2f * scale));
+				for (int i = 0; i < 3; i++)
+				{
+					double phase = seconds / 1.6 + i / 3.0;
+					double progress = phase - Math.floor(phase);
+					float[] at = new float[]{clickX, clickY};
+					float r = (float) (inner + progress * (outer - inner));
+					double from = Math.hypot(at[0] - cx, at[1] - cy) + r;
+					Color ring = fromGradient ? particleColor(spot, detached ? from : r, strength) : color;
+					graphics.setColor(withAlpha(ring, (int) (ring.getAlpha() * (1 - progress))));
+					graphics.draw(new Ellipse2D.Float(at[0] - r, at[1] - r, r * 2, r * 2));
+				}
+				break;
+			case SPARKLES:
+				for (int i = 0; i < particles; i++)
+				{
+					double life = 0.9 + noise(i, 0) * 0.6;
+					double phase = (seconds + noise(i, 1) * life) / life;
+					long cycle = (long) Math.floor(phase);
+					double t = phase - cycle;
+					double angle = noise(i, cycle * 2 + 3) * Math.PI * 2;
+					double distance = inner + Math.sqrt(noise(i, cycle * 2 + 4)) * (outer - inner) * 0.95;
+					float[] at = new float[]{clickX, clickY};
+					float x = (float) (at[0] + Math.cos(angle) * distance);
+					float y = (float) (at[1] + Math.sin(angle) * distance);
+					double twinkle = Math.sin(t * Math.PI);
+					float size = (float) (1.5 + twinkle * 2.5) * scale;
+					Color sparkle = fromGradient ? particleColorAt(spot, x - cx, y - cy, strength) : color;
+					graphics.setColor(withAlpha(sparkle, (int) (sparkle.getAlpha() * twinkle)));
+					// A twinkle star that turns a little as it shines
+					graphics.fill(star(x, y, size * 1.8f, (float) (noise(i, cycle * 2 + 5) * 0.6 + t * 0.4)));
+				}
+				break;
+			case EMBERS:
+			case SNOW:
+				boolean rising = effect == InventoryHoverHighlightConfig.SpotlightEffect.EMBERS;
+				for (int i = 0; i < particles; i++)
+				{
+					double life = 1.4 + noise(i, 0) * 1.2;
+					double phase = (seconds + noise(i, 1) * life) / life;
+					long cycle = (long) Math.floor(phase);
+					double t = phase - cycle;
+					double startX = (noise(i, cycle * 2 + 3) * 2 - 1) * radius * 0.7;
+					double sway = Math.sin(seconds * 2 + i) * radius * 0.06;
+					double travel = (t * 2 - 1) * radius * 0.8;
+					float[] at = new float[]{clickX, clickY};
+					float x = (float) (at[0] + startX + sway);
+					float y = (float) (rising ? at[1] - travel : at[1] + travel);
+					float size = (float) (rising ? 3 - t * 2 : 2 + noise(i, 2) * 2) * scale;
+					double fade = Math.sin(t * Math.PI);
+					Color own = fromGradient ? particleColorAt(spot, x - cx, y - cy, strength) : color;
+					Color shade = rising ? mix(own, withAlpha(new Color(255, 120, 40), own.getAlpha()), (float) t) : own;
+					Color particle = withAlpha(shade, (int) (shade.getAlpha() * fade));
+					if (rising)
+					{
+						drawEmber(graphics, x, y, size, particle);
+					}
+					else
+					{
+						// Each flake spins slowly, some one way and some the other
+						double spin = seconds * (noise(i, 6) - 0.5) * 1.5 + noise(i, 7) * Math.PI;
+						drawSnowflake(graphics, x, y, size * 2.2f, (float) spin, particle, scale);
+					}
+				}
+				break;
+			case ORBIT:
+				for (int i = 0; i < 6; i++)
+				{
+					double angle = seconds * 1.8 + i * Math.PI / 3;
+					float orbit = inner + (outer - inner) * 0.55f;
+					for (int tail = 0; tail < 5; tail++)
+					{
+						double a = angle - tail * 0.12;
+						float x = (float) (clickX + Math.cos(a) * orbit);
+						float y = (float) (clickY + Math.sin(a) * orbit);
+						float size = (4f - tail * 0.6f) * scale;
+						Color dot = fromGradient ? particleColorAt(spot, x - cx, y - cy, strength) : color;
+						graphics.setColor(withAlpha(dot, dot.getAlpha() * (5 - tail) / 5));
+						graphics.fill(new Ellipse2D.Float(x - size / 2, y - size / 2, size, size));
+					}
+				}
+				break;
+			default:
+				break;
+		}
+		graphics.setClip(originalClip);
+	}
+
+	/** A four-pointed twinkle star with curved-in sides, turned by an angle. */
+	private static Shape star(float x, float y, float outer, float angle)
+	{
+		float inner = outer * 0.28f;
+		Path2D path = new Path2D.Float();
+		for (int point = 0; point < 8; point++)
+		{
+			double a = angle + point * Math.PI / 4;
+			float r = point % 2 == 0 ? outer : inner;
+			float px = (float) (x + Math.cos(a) * r);
+			float py = (float) (y + Math.sin(a) * r);
+			if (point == 0)
+			{
+				path.moveTo(px, py);
+			}
+			else
+			{
+				path.lineTo(px, py);
+			}
+		}
+		path.closePath();
+		return path;
+	}
+
+	/** A six-armed snowflake with a pair of small branches on each arm. */
+	private static void drawSnowflake(Graphics2D graphics, float x, float y, float radius, float angle, Color color,
+		float scale)
+	{
+		graphics.setColor(color);
+		graphics.setStroke(new BasicStroke(Math.max(0.8f, scale * 0.9f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+		for (int arm = 0; arm < 6; arm++)
+		{
+			double a = angle + arm * Math.PI / 3;
+			float ex = (float) (x + Math.cos(a) * radius);
+			float ey = (float) (y + Math.sin(a) * radius);
+			graphics.draw(new Line2D.Float(x, y, ex, ey));
+			// Branches two thirds out, angled back toward the center
+			float bx = (float) (x + Math.cos(a) * radius * 0.6);
+			float by = (float) (y + Math.sin(a) * radius * 0.6);
+			float branch = radius * 0.35f;
+			for (int side = -1; side <= 1; side += 2)
+			{
+				double b = a + side * Math.PI / 4;
+				graphics.draw(new Line2D.Float(bx, by, (float) (bx + Math.cos(b) * branch), (float) (by + Math.sin(b) * branch)));
+			}
+		}
+	}
+
+	/** A rising ember: a soft halo, a bright core stretched upward, and a short fading trail below. */
+	private static void drawEmber(Graphics2D graphics, float x, float y, float size, Color color)
+	{
+		size = Math.max(size, 1f);
+		graphics.setColor(withAlpha(color, color.getAlpha() / 4));
+		graphics.fill(new Ellipse2D.Float(x - size * 1.5f, y - size * 1.5f, size * 3, size * 3));
+		graphics.setColor(withAlpha(color, color.getAlpha() / 3));
+		graphics.setStroke(new BasicStroke(size * 0.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+		graphics.draw(new Line2D.Float(x, y + size * 0.6f, x, y + size * 3f));
+		graphics.setColor(color);
+		graphics.fill(new Ellipse2D.Float(x - size / 2, y - size * 0.8f, size, size * 1.6f));
+		// A hot white-ish center
+		graphics.setColor(withAlpha(mix(color, Color.WHITE, 0.6f), color.getAlpha()));
+		graphics.fill(new Ellipse2D.Float(x - size / 4, y - size * 0.35f, size / 2, size * 0.7f));
+	}
+
+	/**
+	 * The tab's color for how the last click went: refused when the game
+	 * refused a click since it, missed when it hit nothing, else worked.
+	 */
+	private Color clickResultColor(TabSettings.Tab tab)
+	{
+		long click = plugin.lastClickNanos;
+		if (plugin.lastRejectedNanos >= click)
+		{
+			return tab.spotlightClickRefusedColor;
+		}
+		if (lastMissNanos == click)
+		{
+			return tab.spotlightClickMissColor;
+		}
+		return tab.spotlightClickSuccessColor;
+	}
+
+	/** The gradient's color at a particle's offset from the mouse, measured the way the gradient type does. */
+	private static Color particleColorAt(Spot spot, double dx, double dy, double strength)
+	{
+		double distance = SpotlightPaint.distance(spot.type, spot.motion, spot.seconds, dx, dy);
+		Color at = particleColor(spot, distance, strength);
+		double keep = SpotlightPaint.pattern(spot.type, spot.seconds, dx, dy, spot.radius);
+		return keep < 1 ? withAlpha(at, (int) (at.getAlpha() * keep)) : at;
+	}
+
+	/** The gradient's color where a particle is, a bit stronger since particles cover less, faded with a click burst. */
+	private static Color particleColor(Spot spot, double distance, double strength)
+	{
+		Color at = spot.colorAt(distance);
+		// Stronger than the fill, since particles cover less, and never so faint they vanish
+		return withAlpha(at, (int) (Math.min(255, Math.max(at.getAlpha() * 1.6, 120)) * strength));
+	}
+
+	/** A steady pseudo-random number from 0 to 1 for a particle and a draw, so particles need no stored state. */
+	private static double noise(int particle, long salt)
+	{
+		long h = particle * 0x9E3779B97F4A7C15L + salt * 0xC2B2AE3D27D4EB4FL;
+		h ^= h >>> 31;
+		h *= 0xBF58476D1CE4E5B9L;
+		h ^= h >>> 29;
+		return (h >>> 11) / (double) (1L << 53);
 	}
 
 	/**
@@ -1219,31 +1805,276 @@ class InventoryHoverHighlightOverlay extends Overlay
 	 * start, then the same gradient runs in reverse out to the falloff end,
 	 * ending in the falloff color.
 	 */
-	private RadialGradientPaint spotlightPaint(TabSettings.Tab tab, Point mouse)
+	/** A spotlight's gradient: its outer radius and its shaped stops and colors. */
+	private static class Spot
+	{
+		final float radius;
+		final float[] stops;
+		final Color[] colors;
+		/** The gradient type, for measuring a particle's distance the same way the paint does. */
+		InventoryHoverHighlightConfig.SpotlightType type;
+		InventoryHoverHighlightConfig.SpotlightMotion motion;
+		double seconds;
+
+		Spot(float radius, float[] stops, Color[] colors)
+		{
+			this.radius = radius;
+			this.stops = stops;
+			this.colors = colors;
+		}
+
+		/** The gradient's color at a distance from the mouse. */
+		Color colorAt(double distance)
+		{
+			float at = (float) Math.max(0, Math.min(1, distance / radius));
+			for (int i = 1; i < stops.length; i++)
+			{
+				if (at <= stops[i])
+				{
+					float span = stops[i] - stops[i - 1];
+					return mix(colors[i - 1], colors[i], span <= 0 ? 1f : (at - stops[i - 1]) / span);
+				}
+			}
+			return colors[colors.length - 1];
+		}
+	}
+
+	/** The band the effect lives in, as {inner, outer} distances from the mouse. */
+	private static float[] effectBand(TabSettings.Tab tab, Point mouse, Shape area)
+	{
+		float spotRadius = tab.spotlightRadius;
+		float glowRadius = spotRadius * tab.spotlightGlowSize / 100f;
+		InventoryHoverHighlightConfig.EffectArea where = tab.spotlightEffectArea;
+		if (where == null || where == InventoryHoverHighlightConfig.EffectArea.OVERLAY)
+		{
+			// On top of the spotlight, within its radius, as the effects first worked
+			return new float[]{0, spotRadius};
+		}
+		float inner = where == InventoryHoverHighlightConfig.EffectArea.GRADIENT ? glowRadius : 0;
+		// With falloff, the gradient runs on past the radius to the falloff end
+		float gradientEnd = tab.spotlightFalloff
+			? Math.max(Math.max(spotRadius, tab.spotlightFalloffDistance) + 1, tab.spotlightFalloffEnd)
+			: spotRadius;
+		if (tab.spotlightFalloff && tab.spotlightFalloffColorEnd > 0 && tab.spotlightFadeEndColor == null)
+		{
+			// The falloff color ends, so the band does too
+			float end = Math.max(Math.max(spotRadius, tab.spotlightFalloffDistance) + 1, tab.spotlightFalloffEnd);
+			float clear = Math.max(spotRadius, tab.spotlightFalloffDistance)
+				+ (end - Math.max(spotRadius, tab.spotlightFalloffDistance)) * (1 - tab.spotlightGlowSize / 100f);
+			gradientEnd = Math.max(gradientEnd, falloffColorEnd(tab, end, clear));
+		}
+		else if (tab.spotlightFalloff && (tab.spotlightFalloffColor.getAlpha() > 0 || tab.spotlightFadeEndColor != null))
+		{
+			// The falloff color is kept past the falloff end, so the band reaches the panel's farthest corner
+			Rectangle2D bounds = area.getBounds2D();
+			double farX = Math.max(Math.abs(bounds.getMinX() - mouse.getX()), Math.abs(bounds.getMaxX() - mouse.getX()));
+			double farY = Math.max(Math.abs(bounds.getMinY() - mouse.getY()), Math.abs(bounds.getMaxY() - mouse.getY()));
+			gradientEnd = Math.max(gradientEnd, (float) Math.hypot(farX, farY) + 1);
+		}
+		float outer = where == InventoryHoverHighlightConfig.EffectArea.GLOW && glowRadius > 0 ? glowRadius : gradientEnd;
+		return new float[]{inner, outer};
+	}
+
+	/** The effect band as a ring around the mouse. */
+	private static Area bandShape(float[] band, Point mouse)
+	{
+		float inner = band[0];
+		float outer = band[1];
+		Area ring = new Area(new Ellipse2D.Float(mouse.getX() - outer, mouse.getY() - outer, outer * 2, outer * 2));
+		if (inner > 0)
+		{
+			ring.subtract(new Area(new Ellipse2D.Float(mouse.getX() - inner, mouse.getY() - inner, inner * 2, inner * 2)));
+		}
+		return ring;
+	}
+
+	/** Whether the effect takes the place of the fill in its band right now. */
+	private static boolean replacesFill(TabSettings.Tab tab, double strength)
+	{
+		return tab.spotlightEffectReplace && strength > 0 && tab.spotlightEffect != null
+			&& tab.spotlightEffectArea != InventoryHoverHighlightConfig.EffectArea.OVERLAY
+			&& tab.spotlightEffect != InventoryHoverHighlightConfig.SpotlightEffect.NONE
+			&& tab.spotlightEffect != InventoryHoverHighlightConfig.SpotlightEffect.PULSE;
+	}
+
+	private Spot spotlight(TabSettings.Tab tab, double effectStrength)
+	{
+		Spot spot = shapedSpot(tab, effectStrength);
+		spot.type = tab.spotlightType;
+		spot.motion = tab.spotlightMotion;
+		spot.seconds = shapeSeconds(tab);
+		return spot;
+	}
+
+	private Spot shapedSpot(TabSettings.Tab tab, double effectStrength)
 	{
 		float radius = tab.spotlightRadius;
+		if (tab.spotlightEffect == InventoryHoverHighlightConfig.SpotlightEffect.PULSE && effectStrength > 0)
+		{
+			// Breathe about 15% in and out, about once a second and a half
+			radius *= 1 + 0.15f * (float) effectStrength * (float) Math.sin(effectSeconds(tab) * Math.PI * 2 / 1.5);
+		}
 		float glowSize = tab.spotlightGlowSize / 100f;
-		Point2D center = new Point2D.Float(mouse.getX(), mouse.getY());
+		Color dim = tab.spotlightDim;
+		Color glow = glowSize > 0 ? tab.spotlightGlow : withAlpha(dim, 0);
 		if (!tab.spotlightFalloff)
 		{
-			Color dim = tab.spotlightDim;
-			return gradient(center, radius,
-				new float[]{0f, glowSize, 1f},
-				new Color[]{glowSize > 0 ? tab.spotlightGlow : withAlpha(dim, 0), withAlpha(dim, 0), dim});
+			return shaped(radius, new float[]{0f, glowSize, 1f}, new Color[]{glow, withAlpha(dim, 0), dim},
+				tab.spotlightShape);
 		}
 
 		// Past the falloff start the same gradient runs in reverse, scaled to the falloff length:
 		// the dim fades to clear over the share it took to build up, then the falloff color fades
 		// in over the glow's share, mirroring the glow at the mouse
-		Color dim = tab.spotlightDim;
 		Color falloff = tab.spotlightFalloffColor;
 		float start = Math.max(radius, tab.spotlightFalloffDistance);
 		float end = Math.max(start + 1, tab.spotlightFalloffEnd);
 		float clear = start + (end - start) * (1 - glowSize);
-		return gradient(center, end,
+		float colorEnd = falloffColorEnd(tab, end, clear);
+		if (colorEnd > end)
+		{
+			// The falloff color fades back out over the same length it took to fade in, mirroring it
+			float fadeOut = Math.max(colorEnd - (end - clear), end);
+			return shaped(colorEnd,
+				new float[]{0f, glowSize * radius / colorEnd, radius / colorEnd, start / colorEnd, clear / colorEnd,
+					clear / colorEnd, end / colorEnd, fadeOut / colorEnd, 1f},
+				new Color[]{glow, withAlpha(dim, 0), dim, dim, withAlpha(dim, 0), withAlpha(falloff, 0), falloff, falloff,
+					tab.spotlightFadeEndColor != null ? tab.spotlightFadeEndColor : withAlpha(falloff, 0)},
+				tab.spotlightShape);
+		}
+		return shaped(end,
 			new float[]{0f, glowSize * radius / end, radius / end, start / end, clear / end, clear / end, 1f},
-			new Color[]{glowSize > 0 ? tab.spotlightGlow : withAlpha(dim, 0), withAlpha(dim, 0), dim, dim,
-				withAlpha(dim, 0), withAlpha(falloff, 0), falloff});
+			new Color[]{glow, withAlpha(dim, 0), dim, dim, withAlpha(dim, 0), withAlpha(falloff, 0), falloff},
+			tab.spotlightShape);
+	}
+
+	/** Where the falloff color has faded back out, or 0 when it is kept to the panel's edges. */
+	private static float falloffColorEnd(TabSettings.Tab tab, float end, float clear)
+	{
+		if (tab.spotlightFalloffColorEnd <= 0)
+		{
+			return 0;
+		}
+		// At least long enough for the mirrored fade
+		return Math.max(tab.spotlightFalloffColorEnd, end + (end - clear) + 1);
+	}
+
+	/**
+	 * The effect's clock in seconds, scaled by the effect speed: time since the
+	 * last click for click bursts, else a running clock.
+	 */
+	private double effectSeconds(TabSettings.Tab tab)
+	{
+		return realEffectSeconds(tab) * Math.max(10, tab.spotlightEffectSpeed) / 100.0;
+	}
+
+	/** The effect's clock in real seconds, so a click burst lasts the same at any speed. */
+	private double realEffectSeconds(TabSettings.Tab tab)
+	{
+		long now = System.nanoTime();
+		return tab.spotlightEffectOnClick ? (now - plugin.lastClickNanos) / 1e9 : now / 1e9;
+	}
+
+	/** 1 while the effect plays, fading to 0 at the end of a click burst. */
+	private double effectStrength(TabSettings.Tab tab)
+	{
+		if (tab.spotlightEffect == null || tab.spotlightEffect == InventoryHoverHighlightConfig.SpotlightEffect.NONE)
+		{
+			return 0;
+		}
+		if (!tab.spotlightEffectOnClick)
+		{
+			return 1;
+		}
+		if (plugin.lastClickNanos == 0)
+		{
+			return 0;
+		}
+		double age = realEffectSeconds(tab);
+		double length = Math.max(100, tab.spotlightEffectLength) / 1000.0;
+		return age >= length ? 0 : 1 - Math.pow(age / length, 3);
+	}
+
+	/** Steps in each fade when it is reshaped. */
+	private static final int SHAPE_STEPS = 12;
+	private static final int BANDS = 4;
+
+	/**
+	 * A gradient with every fade between two stops reshaped: eased for Soft,
+	 * squeezed into a crisp edge for Sharp, or cut into steps for Banded.
+	 * Smooth keeps the even fades.
+	 */
+	private static Spot shaped(float radius, float[] stops, Color[] colors,
+		InventoryHoverHighlightConfig.SpotlightShape shape)
+	{
+		if (shape == null || shape == InventoryHoverHighlightConfig.SpotlightShape.SMOOTH)
+		{
+			return new Spot(radius, stops, colors);
+		}
+
+		List<Float> outStops = new ArrayList<>();
+		List<Color> outColors = new ArrayList<>();
+		outStops.add(stops[0]);
+		outColors.add(colors[0]);
+		for (int i = 1; i < stops.length; i++)
+		{
+			float from = stops[i - 1];
+			float to = stops[i];
+			Color a = colors[i - 1];
+			Color b = colors[i];
+			if (to - from < 0.002f || a.equals(b))
+			{
+				outStops.add(to);
+				outColors.add(b);
+				continue;
+			}
+
+			if (shape == InventoryHoverHighlightConfig.SpotlightShape.BANDED)
+			{
+				for (int band = 1; band <= BANDS; band++)
+				{
+					// Each band holds one shade, then jumps to the next at its edge
+					float edge = from + (to - from) * band / BANDS;
+					Color shade = mix(a, b, (band - 0.5f) / BANDS);
+					outStops.add(edge - (to - from) / BANDS + 0.0005f);
+					outColors.add(shade);
+					outStops.add(edge);
+					outColors.add(shade);
+				}
+				outStops.add(to);
+				outColors.add(b);
+				continue;
+			}
+
+			for (int step = 1; step <= SHAPE_STEPS; step++)
+			{
+				float t = (float) step / SHAPE_STEPS;
+				float eased = shape == InventoryHoverHighlightConfig.SpotlightShape.SOFT
+					? t * t * (3 - 2 * t)
+					// Sharp: most of the change happens in a narrow band at the middle
+					: 1f / (1f + (float) Math.exp(-14 * (t - 0.5f)));
+				outStops.add(from + (to - from) * t);
+				outColors.add(mix(a, b, eased));
+			}
+		}
+
+		float[] newStops = new float[outStops.size()];
+		for (int i = 0; i < newStops.length; i++)
+		{
+			newStops[i] = Math.min(1f, Math.max(0f, outStops.get(i)));
+		}
+		return new Spot(radius, newStops, outColors.toArray(new Color[0]));
+	}
+
+	/** A color part way from one to another, alpha included. */
+	private static Color mix(Color a, Color b, float t)
+	{
+		t = Math.max(0f, Math.min(1f, t));
+		return new Color(
+			Math.round(a.getRed() + (b.getRed() - a.getRed()) * t),
+			Math.round(a.getGreen() + (b.getGreen() - a.getGreen()) * t),
+			Math.round(a.getBlue() + (b.getBlue() - a.getBlue()) * t),
+			Math.round(a.getAlpha() + (b.getAlpha() - a.getAlpha()) * t));
 	}
 
 	/** A radial gradient whose stops are nudged apart, since they must keep increasing. */
@@ -1264,7 +2095,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 		return new RadialGradientPaint(center, radius, fixed, colors);
 	}
 
-	/** Colors the background of every slot with the tab's slot background, icons kept on top. */
+	/** Colors the background of every slot with the tab's slot background, around the icons. */
 	private void drawSlotBackgrounds(Graphics2D graphics, List<Panel> panels)
 	{
 		for (Panel panel : panels)
@@ -1275,16 +2106,39 @@ class InventoryHoverHighlightOverlay extends Overlay
 				continue;
 			}
 
-			graphics.setColor(color);
 			for (Rectangle slot : panel.slots)
 			{
-				graphics.fill(fillShape(slot));
-			}
-			for (Rectangle slot : panel.slots)
-			{
-				drawIcon(graphics, panel, slot);
+				fillAroundIcon(graphics, panel, slot, fillShape(slot), color);
 			}
 		}
+	}
+
+	/**
+	 * Fills a shape over an area, leaving out the pixels of the icon there so the
+	 * game's own icon keeps its colors. The game has already drawn the icon, so
+	 * filling over it and drawing it again would blend its edges and shadow twice.
+	 * With no panel, fills the whole shape.
+	 */
+	private void fillAroundIcon(Graphics2D graphics, Panel panel, Rectangle bounds, Shape shape, Color color)
+	{
+		if (panel == null || bounds.width <= 0 || bounds.height <= 0)
+		{
+			graphics.setColor(color);
+			graphics.fill(shape);
+			return;
+		}
+
+		BufferedImage mask = new BufferedImage(bounds.width, bounds.height, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = mask.createGraphics();
+		g.setRenderingHints(graphics.getRenderingHints());
+		g.translate(-bounds.x, -bounds.y);
+		g.setColor(color);
+		g.fill(shape);
+		// Cut the icon out of the fill by its alpha
+		g.setComposite(AlphaComposite.DstOut);
+		drawIcon(g, panel, bounds);
+		g.dispose();
+		graphics.drawImage(mask, bounds.x, bounds.y, null);
 	}
 
 	/** Draws the icon of the item, prayer or spell in an area again, over anything drawn on it. */
@@ -1315,6 +2169,38 @@ class InventoryHoverHighlightOverlay extends Overlay
 		drawSprites(graphics, widget);
 	}
 
+	/**
+	 * Draws a sprite the way the game draws it in a widget. The cached image is
+	 * trimmed to the sprite's pixels, so it goes at the sprite's offset inside its
+	 * full size, with the full size scaled to the widget.
+	 */
+	private void drawSprite(Graphics2D graphics, int spriteId, Rectangle bounds)
+	{
+		BufferedImage image = spriteManager.getSprite(spriteId, 0);
+		SpritePixels sprite = sprites.computeIfAbsent(spriteId, id ->
+		{
+			SpritePixels[] all = client.getSprites(client.getIndexSprites(), id, 0);
+			return all == null || all.length == 0 ? null : all[0];
+		});
+		if (image == null)
+		{
+			return;
+		}
+		if (sprite == null || sprite.getMaxWidth() <= 0 || sprite.getMaxHeight() <= 0)
+		{
+			graphics.drawImage(image, bounds.x, bounds.y, bounds.width, bounds.height, null);
+			return;
+		}
+
+		double scaleX = (double) bounds.width / sprite.getMaxWidth();
+		double scaleY = (double) bounds.height / sprite.getMaxHeight();
+		int x = bounds.x + (int) Math.round(sprite.getOffsetX() * scaleX);
+		int y = bounds.y + (int) Math.round(sprite.getOffsetY() * scaleY);
+		int width = (int) Math.round(image.getWidth() * scaleX);
+		int height = (int) Math.round(image.getHeight() * scaleY);
+		graphics.drawImage(image, x, y, width, height, null);
+	}
+
 	/** Draws the sprites of a widget and its visible children at their places. */
 	private void drawSprites(Graphics2D graphics, Widget widget)
 	{
@@ -1326,11 +2212,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 		Rectangle bounds = widget.getBounds();
 		if (widget.getSpriteId() >= 0 && bounds != null && bounds.width > 0 && bounds.height > 0)
 		{
-			BufferedImage sprite = spriteManager.getSprite(widget.getSpriteId(), 0);
-			if (sprite != null)
-			{
-				graphics.drawImage(sprite, bounds.x, bounds.y, bounds.width, bounds.height, null);
-			}
+			drawSprite(graphics, widget.getSpriteId(), bounds);
 		}
 
 		for (Widget[] children : new Widget[][]{
@@ -1598,12 +2480,16 @@ class InventoryHoverHighlightOverlay extends Overlay
 	/** Shades food and potions while eating or drinking another one would be ignored. */
 	private void drawCooldowns(Graphics2D graphics, List<Panel> panels, long now)
 	{
-		if (!config.cooldowns())
+		boolean shade = config.cooldowns();
+		boolean outline = config.cooldownOutline();
+		if (!shade && !outline)
 		{
 			return;
 		}
 
 		Color color = config.cooldownColor();
+		Color outlineColor = config.cooldownOutlineColor();
+		int outlineWidth = config.cooldownOutlineWidth();
 		for (Panel panel : panels)
 		{
 			if (panel.kind != PanelKind.INVENTORY)
@@ -1624,6 +2510,14 @@ class InventoryHoverHighlightOverlay extends Overlay
 				long remaining = ticks * (long) InventoryHoverHighlightPlugin.TICK_NANOS - (now - plugin.lastTickNanos);
 				double fraction = Math.max(0, Math.min(1, (double) remaining / total));
 				Rectangle b = slot.bounds;
+				if (outline)
+				{
+					drawDelayOutline(graphics, b, fraction, outlineColor, outlineWidth);
+				}
+				if (!shade)
+				{
+					continue;
+				}
 				switch (config.cooldownStyle())
 				{
 					case DRAIN:
@@ -1826,6 +2720,30 @@ class InventoryHoverHighlightOverlay extends Overlay
 	}
 
 	/** Draws the first {@code fraction} of the shape's outline, measured by length. */
+	/** The eat and drink delay outline on a slot, with {@code fraction} of the delay left. */
+	private void drawDelayOutline(Graphics2D graphics, Rectangle bounds, double fraction, Color color, int width)
+	{
+		Stroke originalStroke = graphics.getStroke();
+		graphics.setStroke(new BasicStroke(width));
+		Shape shape = outlineShape(bounds, width);
+		switch (config.cooldownOutlineStyle())
+		{
+			case FADE:
+				graphics.setColor(withAlpha(color, (int) (color.getAlpha() * fraction)));
+				graphics.draw(shape);
+				break;
+			case TRACE:
+				graphics.setColor(color);
+				drawPartial(graphics, shape, fraction);
+				break;
+			default:
+				graphics.setColor(color);
+				graphics.draw(shape);
+				break;
+		}
+		graphics.setStroke(originalStroke);
+	}
+
 	private static void drawPartial(Graphics2D graphics, Shape shape, double fraction)
 	{
 		if (fraction <= 0)

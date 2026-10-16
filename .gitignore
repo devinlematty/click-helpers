@@ -5,3 +5,4 @@
 /out/
 /runelite_plugin.properties
 *.stackdump
+firebase-debug.log
