@@ -14,9 +14,13 @@ you click.
 - Miss markers, a floating click chart, and settings you can share
 - Per-tab settings for the inventory, prayer tab and spellbook, with an option to
   keep all three in sync
-- Spotlight at the mouse, gear switch practice with progress tracking, and named
-  settings loadouts
-- Optional hiding of items you never click in a fight, and eat and drink delay shading
+- Spotlight at the mouse in many shapes and patterns, with animated effects such
+  as sparkles, embers, snow and ripples that can play on every click
+- Gear switch practice with progress tracking, named settings loadouts, and
+  community loadouts that players publish and share
+- Optional hiding of items you never click in a fight, and eat and drink delay
+  shading and outlines
+- Every setting in a searchable side panel
 
 Fixed and resizable modes are both supported because bounds come straight from
 the game's widgets. The plugin only draws overlays and never sends input. Item
@@ -59,7 +63,8 @@ tab; see
 - **Ring duration / animation**: how long both markers last, and whether they
   grow, shrink, pulse or show as an X
 - **Miss outline**: outlines the slot nearest a dead click, the one you most likely
-  meant, in place of the normal outline until it fades
+  meant, in place of the normal outline until it fades. **Miss outline width**
+  sets its line width; 0 makes it one thicker than the hover outline
 - Miss dots are set per tab
 
 ### Dead areas
@@ -136,14 +141,18 @@ tab; see
   for 3 ticks and potions for its tick
 - Fast foods use their own delay: pizzas and pies 1 tick (2 for the second half of
   pizzas and apple, meat and redberry pies), cakes and giant crab meat 2 ticks
+- **Delay outline**: outlines those items too, with or without the shading. Solid,
+  fading out as the delay runs down, or tracing around the slot like a timer;
+  its own color and line width
 
 ### Switch practice
 
 - Lights up random empty inventory slots to click as fast as you can, like a gear
   switch. Clicks off the targets count as misses and show the usual miss markers
 - Each round records reaction time, switch time (first to last click), the ticks
-  the clicks spread over, and misses. Stats show above the inventory: the last
-  round, the session (average and best time, 1-tick rate, accuracy, timeouts), or both
+  the clicks spread over, and misses. Stats show in a box you can move with
+  Alt+drag: the last round, the session (average and best time, 1-tick rate,
+  accuracy, timeouts), or both
 - Start and stop from the side panel or the **Practice hotkey**. Clicking an item
   still uses it, so practice with free slots
 - Settings are on the side panel's Practice tab: slots per switch (1-28), pause
@@ -155,22 +164,30 @@ tab; see
 
 ### Import/export settings
 
-- **Export settings**: tick to export all plugin settings to the clipboard as
-  readable JSON grouped by section, to share them
-- **Import settings**: tick to import shared JSON settings from the clipboard
-- Each box unticks itself and the result shows in chat
-- **Side panel**: turns the Click Helpers side panel on or off
-- **Community loadouts**: off by default. Turns on the side panel's Community
-  tab, see below
+- **Export** and **Import** on the side panel's Loadouts tab copy every setting to
+  the clipboard as readable JSON grouped by section, and apply shared JSON from it
+- RuneLite's own config panel holds just two switches: **Side panel**, which turns
+  the side panel on or off (it holds every other setting), and **Community
+  loadouts**, off by default, which turns on the community features below
 
 ### Community loadouts
 
-The side panel's Community tab lists loadouts other players published, and
-publishes your current settings under a name. You never log in: the plugin
-makes up an author name for you, like "Swift Goblin 42", and each install can
-publish up to 10 loadouts. Publishing again with the same name replaces that
-loadout. You must be logged in to the game to publish, and names with bad
-words are refused and cleared.
+The Community part of the side panel's Loadouts tab publishes your saved
+loadouts for others, and **Browse** opens a window of what other players
+published. You never log in: the plugin makes up an author name for you, like
+"Swift Goblin 42", and each install can publish up to 10 loadouts. Publishing
+again with the same name replaces that loadout. You must be logged in to the
+game to publish, and names with bad words are refused and cleared.
+
+- **Publish as**: fills in with the picked loadout's name; change it to publish
+  under another name
+- **Sections to publish**: publish only some settings sections, so others can take
+  just your click feedback or your spotlight
+- **Browser**: a table sortable by name, author, date or sections, a search box,
+  a section filter (ticked sections, with **Only these** for exact matches), your
+  own loadouts only, and a preview of every setting a loadout changes
+- **Load** asks which of its sections to take, then adds it as a new loadout or
+  applies it over your current settings
 
 Loading a community loadout only changes Click Helpers settings, and never
 turns network features on.
@@ -189,13 +206,18 @@ are never sent. Setup and admin notes are in [`firebase/README.md`](firebase/REA
 
 ### Side panel
 
+- **Settings tab**: every setting, in collapsible sections, with a search box that
+  filters as you type and Expand all / Collapse all buttons. Values update the
+  moment they change, tab sync included. Right-click a setting to reset it
 - **Loadouts tab**: Export and Import buttons; named loadouts that save every
-  current setting and load or delete them from a dropdown; and **Randomize all
-  settings**, which randomizes every setting except the click chart, hotkeys and
-  text lists, each tab on its own (it turns off tab sync). Loadouts are kept in RuneLite's
-  config, not in files
+  current setting and load or delete them from a dropdown; the Community section;
+  and **Randomize all settings**, which randomizes every setting except the click
+  chart, hotkeys, text lists, tab sync and practice, each tab on its own.
+  Loadouts are kept in RuneLite's config, not in files
 - **Practice tab**: switch practice start button, session stats, progress chart
   and practice settings
+- **Off with empty inventory** (Areas): draw nothing while your inventory is
+  empty, as if the plugin were off
 
 ### Inventory, prayer and spellbook tabs
 
@@ -210,7 +232,23 @@ sections of their own:
   2000 px), dim and glow colors, glow size (0 for dimming only), spotlight the
   panel even when not hovered, only dim dead areas, and falloff: past the
   falloff start the gradient runs in reverse, fading the dim out and a falloff
-  color in by the falloff end
+  color in by the falloff end. **Falloff color end** fades that color back out
+  the same way it came in, or into a **Fade end color**
+  - **Gradient**: smooth, soft, sharp or banded fades
+  - **Gradient type**: circle, ellipse, square, diamond, star, hexagon, cross,
+    flower, vertical or horizontal band, or the patterns rings, spiral and radar.
+    **Gradient motion** spins or wobbles the shape. All of them carry on through
+    the falloff
+  - **Effect**: pulse, ripples, sparkles, embers, orbit or snow. **Effect on**
+    keeps it on top (overlay) or to the glow, the gradient or the whole spotlight,
+    and **Replace with effect** draws that part only as the effect. Particles take
+    the colors drawn under them unless you set a **Custom effect color**
+  - **Effect on click** plays it as a burst on each click, with an **Effect length**,
+    optional **Click result colors** for good, bad and refused clicks, and **Detach
+    from mouse** to let each burst play out where it started. **Effect speed** and
+    **Effect size** scale it
+  - **Click effects anywhere** (inventory only): clicks outside the panels, such as
+    on the game world, play the effect too, at most once per **Click anywhere delay**
 - **Miss dots**: a dot at every dead click, with color, shape (circle, ring,
   square, diamond, triangle, cross, plus or heart), hollow, size and duration
 

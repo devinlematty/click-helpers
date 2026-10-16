@@ -45,7 +45,9 @@ class SettingsSharing
 	/** Settings that start something and must never be copied or pasted. */
 	private static final Set<String> SKIPPED_KEYS = Set.of("copySettings", "pasteSettings", "practiceMode",
 		// A shared loadout must never turn on network features for whoever loads it
-		"communityLoadouts");
+		"communityLoadouts",
+		// Personal choices that a loadout should not change for whoever loads it
+		"syncTabSettings", "sidePanel");
 
 	private static final List<String> TAB_PREFIXES = TabSettings.PREFIXES;
 
@@ -286,7 +288,7 @@ class SettingsSharing
 		{
 			// Practice settings are kept as they are; the side panel's practice tab sets them
 			// Off with empty inventory would look like the plugin broke, so it is left as it is
-			if (SKIPPED_KEYS.contains(item.key()) || item.key().equals("syncTabSettings") || item.key().equals("hideWhenEmpty")
+			if (SKIPPED_KEYS.contains(item.key()) || item.key().equals("hideWhenEmpty")
 				|| item.key().startsWith("practice")
 				|| NOT_RANDOMIZED_SECTIONS.contains(item.getItem().section()))
 			{

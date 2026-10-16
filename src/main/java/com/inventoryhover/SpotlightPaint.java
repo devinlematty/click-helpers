@@ -162,17 +162,21 @@ final class SpotlightPaint implements Paint
 			if (at <= stops[i])
 			{
 				float span = stops[i] - stops[i - 1];
-				float t = span <= 0 ? 1f : (at - stops[i - 1]) / span;
-				Color a = colors[i - 1];
-				Color b = colors[i];
-				return new Color(
-					Math.round(a.getRed() + (b.getRed() - a.getRed()) * t),
-					Math.round(a.getGreen() + (b.getGreen() - a.getGreen()) * t),
-					Math.round(a.getBlue() + (b.getBlue() - a.getBlue()) * t),
-					Math.round(a.getAlpha() + (b.getAlpha() - a.getAlpha()) * t));
+				return mix(colors[i - 1], colors[i], span <= 0 ? 1f : (at - stops[i - 1]) / span);
 			}
 		}
 		return colors[colors.length - 1];
+	}
+
+	/** A color part way from one to another, alpha included. */
+	static Color mix(Color a, Color b, float t)
+	{
+		t = Math.max(0f, Math.min(1f, t));
+		return new Color(
+			Math.round(a.getRed() + (b.getRed() - a.getRed()) * t),
+			Math.round(a.getGreen() + (b.getGreen() - a.getGreen()) * t),
+			Math.round(a.getBlue() + (b.getBlue() - a.getBlue()) * t),
+			Math.round(a.getAlpha() + (b.getAlpha() - a.getAlpha()) * t));
 	}
 
 	@Override

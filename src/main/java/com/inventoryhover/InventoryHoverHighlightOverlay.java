@@ -5,7 +5,6 @@ import java.awt.BasicStroke;
 import java.awt.Composite;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Paint;
 import java.awt.RadialGradientPaint;
@@ -1557,6 +1556,8 @@ class InventoryHoverHighlightOverlay extends Overlay
 
 
 	private static final int PARTICLES = 14;
+	/** Most particles one effect draws in a frame, however far its area reaches. */
+	private static final int MAX_PARTICLES = 120;
 
 	/** The animated part of a spotlight effect, inside the spotlight's area. */
 	private void drawSpotlightEffect(Graphics2D graphics, TabSettings.Tab tab, Point mouse, Point origin, Shape area,
@@ -1583,7 +1584,8 @@ class InventoryHoverHighlightOverlay extends Overlay
 		boolean replacing = replacesFill(tab, strength);
 		// Keep about the same density when the band reaches past the spotlight, such as out to the falloff color
 		float reach = Math.min(3f, outer / Math.max(1f, tab.spotlightRadius));
-		int particles = (int) ((replacing ? PARTICLES * 3 : PARTICLES) * Math.max(1f, reach * reach));
+		int particles = Math.min(MAX_PARTICLES,
+			(int) ((replacing ? PARTICLES * 3 : PARTICLES) * Math.max(1f, reach * reach)));
 		// Effects are laid out over the band's outer radius, and kept to the band by the clip
 		float radius = outer;
 		float cx = mouse.getX();
@@ -1829,16 +1831,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 		/** The gradient's color at a distance from the mouse. */
 		Color colorAt(double distance)
 		{
-			float at = (float) Math.max(0, Math.min(1, distance / radius));
-			for (int i = 1; i < stops.length; i++)
-			{
-				if (at <= stops[i])
-				{
-					float span = stops[i] - stops[i - 1];
-					return mix(colors[i - 1], colors[i], span <= 0 ? 1f : (at - stops[i - 1]) / span);
-				}
-			}
-			return colors[colors.length - 1];
+			return SpotlightPaint.colorAt((float) (distance / radius), stops, colors);
 		}
 	}
 
@@ -2072,12 +2065,7 @@ class InventoryHoverHighlightOverlay extends Overlay
 	/** A color part way from one to another, alpha included. */
 	private static Color mix(Color a, Color b, float t)
 	{
-		t = Math.max(0f, Math.min(1f, t));
-		return new Color(
-			Math.round(a.getRed() + (b.getRed() - a.getRed()) * t),
-			Math.round(a.getGreen() + (b.getGreen() - a.getGreen()) * t),
-			Math.round(a.getBlue() + (b.getBlue() - a.getBlue()) * t),
-			Math.round(a.getAlpha() + (b.getAlpha() - a.getAlpha()) * t));
+		return SpotlightPaint.mix(a, b, t);
 	}
 
 	/** A radial gradient whose stops are nudged apart, since they must keep increasing. */
