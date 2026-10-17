@@ -1532,6 +1532,8 @@ public interface InventoryHoverHighlightConfig extends Config
 		description = "Browse and publish loadouts in the side panel's Community tab. When on, the panel"
 			+ " connects to Google Firebase to list and publish loadouts, and downloads a public word"
 			+ " list from jsdelivr.net to check names. Nothing is sent until you press a button",
+		warning = "This plugin submits your IP address, and may submit other data, to a 3rd party server"
+			+ " not controlled or verified by the RuneLite developers.",
 		position = 3,
 		section = shareSection
 	)
